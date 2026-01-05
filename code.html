@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Iron AI - Gym Assistant</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#13ec5b",
+              "background-light": "#f6f8f6",
+              "background-dark": "#102216",
+              "surface-dark": "#112217",
+              "surface-highlight": "#23482f",
+              "text-muted": "#92c9a4",
+            },
+            fontFamily: {
+              "display": ["Space Grotesk", "sans-serif"],
+              "body": ["Noto Sans", "sans-serif"],
+            },
+            borderRadius: {
+              "DEFAULT": "0.25rem",
+              "lg": "0.5rem",
+              "xl": "0.75rem",
+              "2xl": "1rem",
+              "full": "9999px"
+            },
+          },
+        },
+      }
+    </script>
+<style>
+        /* Custom Scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #112217; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #23482f; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #13ec5b; 
+        }
+    </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-white overflow-hidden antialiased selection:bg-primary selection:text-surface-dark">
+<div class="flex h-screen w-full">
+<!-- Sidebar Navigation -->
+<aside class="w-72 bg-surface-dark border-r border-surface-highlight hidden lg:flex flex-col justify-between p-6 shrink-0 z-20">
+<div class="flex flex-col gap-8">
+<!-- Logo -->
+<div class="flex flex-col gap-0.5">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-3xl font-bold">bolt</span>
+<h1 class="text-white text-2xl font-bold tracking-tight">IRON AI</h1>
+</div>
+<p class="text-text-muted text-xs font-medium tracking-wide pl-1">GYM ASSISTANT</p>
+</div>
+<!-- Navigation Menu -->
+<nav class="flex flex-col gap-2">
+<button class="flex items-center gap-4 px-4 py-3 rounded-xl bg-surface-highlight/50 border border-primary/20 transition-all hover:bg-surface-highlight group cursor-pointer shadow-[0_0_15px_-5px_rgba(19,236,91,0.15)]">
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">fitness_center</span>
+<span class="text-white font-medium text-base">Gymday</span>
+</button>
+<button class="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-highlight/40 transition-colors text-text-muted hover:text-white cursor-pointer group">
+<span class="material-symbols-outlined group-hover:text-white transition-colors">calendar_month</span>
+<span class="font-medium text-base">Sessions</span>
+</button>
+<button class="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-highlight/40 transition-colors text-text-muted hover:text-white cursor-pointer group">
+<span class="material-symbols-outlined group-hover:text-white transition-colors">format_list_numbered</span>
+<span class="font-medium text-base">Sets</span>
+</button>
+<button class="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-highlight/40 transition-colors text-text-muted hover:text-white cursor-pointer group">
+<span class="material-symbols-outlined group-hover:text-white transition-colors">monitoring</span>
+<span class="font-medium text-base">Progress</span>
+</button>
+</nav>
+</div>
+<!-- Bottom Actions -->
+<div class="flex flex-col gap-2 border-t border-surface-highlight pt-6">
+<button class="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-highlight/40 transition-colors text-text-muted hover:text-white cursor-pointer group">
+<span class="material-symbols-outlined group-hover:text-white transition-colors">settings</span>
+<span class="font-medium text-base">Settings</span>
+</button>
+<div class="mt-2 flex items-center gap-3 px-4 py-3 rounded-xl bg-surface-highlight/20">
+<div class="h-8 w-8 rounded-full bg-gradient-to-tr from-primary to-emerald-600 flex items-center justify-center text-surface-dark font-bold text-xs" data-alt="User profile avatar gradient">
+                        JD
+                    </div>
+<div class="flex flex-col">
+<span class="text-sm font-bold text-white leading-none">John Doe</span>
+<span class="text-xs text-text-muted mt-1">Pro Member</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col h-full relative bg-background-dark/95 backdrop-blur-sm">
+<!-- Top Header -->
+<header class="h-18 min-h-[72px] flex items-center justify-between px-6 lg:px-10 border-b border-surface-highlight bg-surface-dark/50 backdrop-blur-md z-10">
+<div class="flex items-center gap-3 lg:hidden">
+<span class="material-symbols-outlined text-white cursor-pointer">menu</span>
+<h2 class="text-white text-lg font-bold">Iron AI</h2>
+</div>
+<div class="hidden lg:flex items-center gap-2">
+<span class="relative flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+</span>
+<h2 class="text-white text-lg font-bold tracking-tight ml-2">Assistant Online</h2>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex items-center justify-center h-10 w-10 rounded-lg hover:bg-surface-highlight text-text-muted hover:text-white transition-colors" title="Clear Chat">
+<span class="material-symbols-outlined text-[20px]">delete_sweep</span>
+</button>
+<button class="flex items-center justify-center h-10 w-10 rounded-lg hover:bg-surface-highlight text-text-muted hover:text-white transition-colors" title="More Options">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+</header>
+<!-- Chat Stream -->
+<div class="flex-1 overflow-y-auto px-6 lg:px-20 py-8 flex flex-col gap-8 scroll-smooth" id="chat-container">
+<!-- Date Separator -->
+<div class="flex justify-center">
+<span class="text-xs font-medium text-text-muted uppercase tracking-widest bg-surface-highlight/30 px-3 py-1 rounded-full">Today, 8:32 AM</span>
+</div>
+<!-- AI Message (Welcome) -->
+<div class="flex items-start gap-4 max-w-3xl">
+<div class="h-10 w-10 rounded-full bg-surface-highlight shrink-0 flex items-center justify-center overflow-hidden border border-primary/30 shadow-[0_0_10px_rgba(19,236,91,0.2)]">
+<div class="bg-cover bg-center h-full w-full" data-alt="Abstract futuristic AI assistant avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB1Y0JqMK9Alw-zyo_rX04W3OHBsnN6NlpQ77_FrF7eJqEMFZA5I9qkzb9KW2OsrpayyNvuxXzrWzTrgeypAHy0JGTk4sXEQ6o-GkKOUltB7tZNARLxQAYO6LpIasTPhSoNpYQTsFfqV6KQ2SZgJpJLtaE2RVPE7NsdQ2EMlaMqBc0-uEgnjYfILgvNZUmmluYdCPiiC8AxkQeZ9K6SQfiUrLmJxi0-ix24oCEqAd1pnoowjbTmOdKUn8J_zxQv5njfEtinj2eGYos');"></div>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex items-baseline gap-2">
+<span class="text-primary text-sm font-bold">Iron AI</span>
+<span class="text-text-muted text-xs">8:32 AM</span>
+</div>
+<div class="p-4 rounded-r-2xl rounded-bl-2xl bg-surface-highlight text-white text-base leading-relaxed shadow-sm">
+<p>Ready to crush it today? 💪 I've analyzed your recovery data.</p>
+<p class="mt-2">You can ask me to <span class="text-primary font-medium cursor-pointer hover:underline">plan your workout</span>, <span class="text-primary font-medium cursor-pointer hover:underline">log a set</span>, or <span class="text-primary font-medium cursor-pointer hover:underline">review your progress</span>.</p>
+</div>
+</div>
+</div>
+<!-- User Message -->
+<div class="flex items-start gap-4 flex-row-reverse self-end max-w-3xl">
+<div class="h-10 w-10 rounded-full bg-gradient-to-tr from-primary to-emerald-600 shrink-0 flex items-center justify-center text-surface-dark font-bold text-xs shadow-md" data-alt="User profile avatar circle">
+                        JD
+                    </div>
+<div class="flex flex-col gap-2 items-end">
+<div class="flex items-baseline gap-2 flex-row-reverse">
+<span class="text-white text-sm font-bold">You</span>
+<span class="text-text-muted text-xs">8:34 AM</span>
+</div>
+<div class="p-4 rounded-l-2xl rounded-br-2xl bg-primary text-surface-dark text-base font-medium leading-relaxed shadow-[0_4px_15px_-3px_rgba(19,236,91,0.3)]">
+<p>Show me my stats for the Bench Press this month.</p>
+</div>
+</div>
+</div>
+<!-- AI Response (With Data Card) -->
+<div class="flex items-start gap-4 max-w-3xl">
+<div class="h-10 w-10 rounded-full bg-surface-highlight shrink-0 flex items-center justify-center overflow-hidden border border-primary/30 shadow-[0_0_10px_rgba(19,236,91,0.2)]">
+<div class="bg-cover bg-center h-full w-full" data-alt="Abstract futuristic AI assistant avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB6MHiLwDfNJNsbzfhY9VgnD9do9U8_93jEan-W36w-5KEVeDMdSz_s_EuCxMkeZvGf9Ous_M5JYIUV6RBvKRmAjixWoOvEko_YYd_RDfkz9nluahT-5v2IcinqHrSIknNWayPhOoW7sfgZ-Aw-_kG2XAqNlmPOFbrN5crQb5dfRlTgLaD2tZjdQQ3SyNZtVZEDNV6JETFfw2TmgSUrQe4IaOf1BEHjg210WakqxffaGi1JOu4pd8kDC3XLLN5pz7j8fSaUcHrQbsQ');"></div>
+</div>
+<div class="flex flex-col gap-2 w-full">
+<div class="flex items-baseline gap-2">
+<span class="text-primary text-sm font-bold">Iron AI</span>
+<span class="text-text-muted text-xs">8:34 AM</span>
+</div>
+<!-- Rich Card Content -->
+<div class="flex flex-col overflow-hidden rounded-r-2xl rounded-bl-2xl bg-surface-highlight border border-white/5 w-full md:max-w-md shadow-lg">
+<div class="p-4 border-b border-white/10 bg-white/5 flex justify-between items-center">
+<h3 class="text-white font-bold text-sm uppercase tracking-wide flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">fitness_center</span>
+                                    Bench Press
+                                </h3>
+<span class="bg-primary/20 text-primary text-xs font-bold px-2 py-0.5 rounded uppercase">Oct 2023</span>
+</div>
+<div class="p-5 flex flex-col gap-4">
+<div class="flex justify-between items-end">
+<div>
+<p class="text-text-muted text-xs uppercase mb-1">Max Weight</p>
+<p class="text-3xl font-bold text-white">105 <span class="text-base text-text-muted font-normal">kg</span></p>
+</div>
+<div class="text-right">
+<p class="text-text-muted text-xs uppercase mb-1">Total Volume</p>
+<p class="text-xl font-bold text-white">4,250 <span class="text-base text-text-muted font-normal">kg</span></p>
+</div>
+</div>
+<!-- Fake Graph Bars -->
+<div class="h-24 flex items-end justify-between gap-2 mt-2 pt-4 border-t border-white/10 relative">
+<div class="w-full bg-primary/20 hover:bg-primary/40 rounded-t transition-all cursor-pointer group relative" style="height: 40%">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-1 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">85kg</div>
+</div>
+<div class="w-full bg-primary/20 hover:bg-primary/40 rounded-t transition-all cursor-pointer group relative" style="height: 55%">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-1 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">90kg</div>
+</div>
+<div class="w-full bg-primary/20 hover:bg-primary/40 rounded-t transition-all cursor-pointer group relative" style="height: 45%">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-1 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">88kg</div>
+</div>
+<div class="w-full bg-primary/20 hover:bg-primary/40 rounded-t transition-all cursor-pointer group relative" style="height: 70%">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-1 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">95kg</div>
+</div>
+<div class="w-full bg-primary rounded-t shadow-[0_0_10px_rgba(19,236,91,0.4)] relative" style="height: 100%">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 bg-primary text-surface-dark font-bold text-[10px] px-1 py-0.5 rounded">105kg</div>
+</div>
+</div>
+<div class="flex justify-between text-[10px] text-text-muted uppercase font-medium">
+<span>Week 1</span>
+<span>Week 5</span>
+</div>
+</div>
+<div class="bg-white/5 p-3 text-center">
+<p class="text-sm text-text-muted">You're up <span class="text-primary font-bold">+12%</span> from last month. Keep pushing! 🔥</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Loader Example -->
+<div class="flex items-start gap-4 max-w-3xl opacity-0 animate-[fadeIn_0.5s_ease-in_forwards]" style="animation-delay: 1s;">
+<div class="h-10 w-10 rounded-full bg-surface-highlight shrink-0 flex items-center justify-center overflow-hidden border border-primary/30">
+<div class="bg-cover bg-center h-full w-full" data-alt="Abstract futuristic AI assistant avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCFCIWkK8nefgngW3S0uxGXJgwo7hhGxW-39fg7HRcMzy0rOvRYvKz3lHrE8nID3x4c1SoOj5rOHNx8b2rfYQhewnwKLUm73IjWwFNVVGvP17blJkS3cVKhrBHOW9tPBxk_X5pW04fJZbbsLNHRqDsbfmHCfbLxChtGE4LPbPMZia9WoyI-9cs7xdfO6xgF6qkDOlEqqRD_xf2FVFQanRngQA6ISvhGHblHcWe73XI6Cd1o19EfSrwPh1W1oI6UzyognTkmHpQ2Dug');"></div>
+</div>
+<div class="flex items-center h-10">
+<div class="flex gap-1.5 px-3">
+<div class="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+<div class="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+<div class="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Composer Area -->
+<div class="px-4 pb-6 lg:px-40 pt-2 bg-gradient-to-t from-background-dark via-background-dark to-transparent z-10">
+<div class="max-w-[960px] mx-auto flex flex-col gap-3">
+<!-- Chips -->
+<div class="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
+<button class="whitespace-nowrap flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-highlight/80 hover:bg-surface-highlight border border-white/5 hover:border-primary/50 transition-all cursor-pointer group">
+<span class="material-symbols-outlined text-primary text-sm group-hover:scale-110 transition-transform">edit_note</span>
+<span class="text-white text-sm font-medium">Log workout</span>
+</button>
+<button class="whitespace-nowrap flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-highlight/80 hover:bg-surface-highlight border border-white/5 hover:border-primary/50 transition-all cursor-pointer group">
+<span class="material-symbols-outlined text-primary text-sm group-hover:scale-110 transition-transform">add_circle</span>
+<span class="text-white text-sm font-medium">Create routine</span>
+</button>
+<button class="whitespace-nowrap flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-highlight/80 hover:bg-surface-highlight border border-white/5 hover:border-primary/50 transition-all cursor-pointer group">
+<span class="material-symbols-outlined text-primary text-sm group-hover:scale-110 transition-transform">insights</span>
+<span class="text-white text-sm font-medium">Show progress</span>
+</button>
+</div>
+<!-- Input Bar -->
+<div class="relative flex items-center w-full bg-surface-highlight rounded-2xl border border-white/5 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50 transition-all shadow-lg">
+<input class="w-full bg-transparent border-none text-white placeholder-text-muted px-5 py-4 text-base focus:ring-0 rounded-2xl" placeholder="Type your workout details..." type="text"/>
+<div class="flex items-center gap-2 pr-3">
+<button class="p-2 rounded-lg hover:bg-white/10 text-text-muted hover:text-white transition-colors" title="Voice Input">
+<span class="material-symbols-outlined">mic</span>
+</button>
+<button class="h-10 px-5 rounded-xl bg-primary hover:bg-primary/90 text-surface-dark font-bold text-sm transition-colors flex items-center gap-2">
+<span>Send</span>
+<span class="material-symbols-outlined text-lg">send</span>
+</button>
+</div>
+</div>
+<div class="text-center">
+<p class="text-[10px] text-text-muted opacity-50">Iron AI can make mistakes. Verify important information.</p>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
