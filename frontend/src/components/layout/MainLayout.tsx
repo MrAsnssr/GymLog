@@ -57,8 +57,8 @@ export function MainLayout({ children, title, showAssistantStatus = true, action
                         onClick={toggleLanguage}
                         className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-highlight/40 border border-surface-highlight hover:border-primary/50 text-white transition-all text-sm font-bold shadow-sm"
                     >
-                        <span className="text-lg leading-none">{i18n.language === 'en' ? '🇴🇲' : '🇺🇸'}</span>
-                        <span className="hidden sm:inline">{i18n.language === 'en' ? 'العربية' : 'English'}</span>
+                        <span className="text-lg leading-none">{i18n.language.startsWith('ar') ? '🇺🇸' : '🇴🇲'}</span>
+                        <span className="hidden sm:inline">{i18n.language.startsWith('ar') ? 'English' : 'العربية'}</span>
                     </button>
 
                     {/* Settings */}
