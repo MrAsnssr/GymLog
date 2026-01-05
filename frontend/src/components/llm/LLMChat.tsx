@@ -330,19 +330,19 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
       <div className="px-4 pb-6 lg:px-40 pt-2 bg-gradient-to-t from-background-dark via-background-dark to-transparent z-10">
         <div className="max-w-[960px] mx-auto flex flex-col gap-3">
           {/* Input Bar */}
-          <form onSubmit={handleSubmit} className="relative flex items-center w-full bg-surface-highlight rounded-2xl border border-white/5 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50 transition-all shadow-lg">
+          <form onSubmit={handleSubmit} className="relative flex items-center w-full bg-surface-highlight rounded-2xl border border-white/5 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50 transition-all shadow-xl min-h-[56px]">
             <input
-              className="w-full bg-transparent border-none text-white placeholder-text-muted px-5 py-4 text-base focus:ring-0 rounded-2xl focus:outline-none"
-              placeholder={t('common.type_workout_details')}
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              placeholder={t('common.type_workout_details')}
+              className="flex-1 bg-transparent py-4 px-6 text-white placeholder-text-muted focus:outline-none text-base"
               disabled={loading}
             />
-            <div className="flex items-center gap-2 pr-3">
-              <button type="submit" disabled={loading || !input.trim()} className="h-10 px-5 rounded-xl bg-primary hover:bg-primary/90 text-surface-dark font-bold text-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                <span>{t('common.send')}</span>
-                <span className="material-symbols-outlined text-lg">send</span>
+            <div className="flex items-center gap-2 pe-3 ps-1">
+              <button type="submit" disabled={loading || !input.trim()} className="h-11 w-11 sm:w-auto sm:px-6 rounded-full sm:rounded-xl bg-primary hover:bg-primary/90 text-surface-dark font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(19,236,91,0.2)] active:scale-95">
+                <span className="hidden sm:inline">{t('common.send')}</span>
+                <span className="material-symbols-outlined text-xl rtl:rotate-180">send</span>
               </button>
             </div>
           </form>
