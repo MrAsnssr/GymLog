@@ -329,22 +329,6 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
       {/* Composer Area */}
       <div className="px-4 pb-6 lg:px-40 pt-2 bg-gradient-to-t from-background-dark via-background-dark to-transparent z-10">
         <div className="max-w-[960px] mx-auto flex flex-col gap-3">
-          {/* Chips */}
-          <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
-            <button onClick={() => setInput(t('common.log_workout', 'Log workout'))} className="whitespace-nowrap flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-highlight/80 hover:bg-surface-highlight border border-white/5 hover:border-primary/50 transition-all cursor-pointer group">
-              <span className="material-symbols-outlined text-primary text-sm group-hover:scale-110 transition-transform">edit_note</span>
-              <span className="text-white text-sm font-medium">{t('common.log_workout', 'Log workout')}</span>
-            </button>
-            <button onClick={() => setInput(t('common.create_routine', 'Create routine'))} className="whitespace-nowrap flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-highlight/80 hover:bg-surface-highlight border border-white/5 hover:border-primary/50 transition-all cursor-pointer group">
-              <span className="material-symbols-outlined text-primary text-sm group-hover:scale-110 transition-transform">add_circle</span>
-              <span className="text-white text-sm font-medium">{t('common.create_routine', 'Create routine')}</span>
-            </button>
-            <button onClick={() => setInput(t('common.show_progress', 'Show progress'))} className="whitespace-nowrap flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-highlight/80 hover:bg-surface-highlight border border-white/5 hover:border-primary/50 transition-all cursor-pointer group">
-              <span className="material-symbols-outlined text-primary text-sm group-hover:scale-110 transition-transform">insights</span>
-              <span className="text-white text-sm font-medium">{t('common.show_progress', 'Show progress')}</span>
-            </button>
-          </div>
-
           {/* Input Bar */}
           <form onSubmit={handleSubmit} className="relative flex items-center w-full bg-surface-highlight rounded-2xl border border-white/5 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50 transition-all shadow-lg">
             <input
