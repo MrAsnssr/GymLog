@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react'
+import { useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
@@ -34,6 +35,7 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
   const { session, user } = useAuth()
   const { t } = useTranslation()
   const { addLog } = useAiDebug()
+  const navigate = useNavigate()
 
   // Load messages from localStorage or use default welcome message
   const getInitialMessages = (): Message[] => {
@@ -217,26 +219,6 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
   }
 
   const [showResetConfirm, setShowResetConfirm] = useState(false)
-  const [showSubscribeModal, setShowSubscribeModal] = useState(false)
-
-  const handleUpgrade = async () => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session?.access_token}`,
-            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-          },
-        }
-      )
-      const data = await response.json()
-      if (data.url) window.location.href = data.url
-    } catch (err) {
-      console.error('Checkout failed:', err)
-    }
-  }
 
   // Auto-hide confirmation after 3 seconds
   useEffect(() => {
@@ -292,51 +274,22 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
               if (userProfile?.is_pro) {
                 setIsPro(!isPro)
               } else {
-                setShowSubscribeModal(true)
+                navigate('/pro')
               }
             }}
             className={`relative z-50 flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] transition-all border ${isPro
               ? 'bg-gradient-to-r from-primary to-emerald-500 text-surface-dark border-transparent shadow-[0_0_15px_rgba(19,236,91,0.4)] scale-105'
-              : 'bg-surface-highlight/20 text-text-muted border-white/5 hover:border-white/10'}`}
+              : userProfile?.is_pro
+                ? 'bg-surface-highlight/20 text-text-muted border-white/5 hover:border-white/10'
+                : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-transparent shadow-[0_0_15px_rgba(245,158,11,0.4)] hover:scale-105 animate-pulse'}`}
           >
             <span className={`material-symbols-outlined text-sm ${isPro ? 'animate-pulse' : ''}`}>
-              {isPro ? 'workspace_premium' : 'bolt'}
+              {isPro ? 'workspace_premium' : (userProfile?.is_pro ? 'bolt' : 'star')}
             </span>
-            {isPro ? 'Hazem Pro (5.2)' : 'Hazem Base'}
-            {!userProfile?.is_pro && <span className="ms-1 opacity-50">$5/mo</span>}
+            {isPro ? 'Hazem Pro (5.2)' : (userProfile?.is_pro ? 'Hazem Mini' : 'Get Pro')}
+            {!userProfile?.is_pro && <span className="ms-1 opacity-80">$5/mo</span>}
           </button>
         </div>
-
-        {/* Subscribe Modal */}
-        {showSubscribeModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm">
-            <div className="bg-surface-highlight p-8 rounded-3xl border border-white/10 max-w-sm w-full shadow-2xl animate-[fadeIn_0.2s_ease-out]">
-              <div className="flex flex-col items-center text-center gap-4">
-                <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center mb-2">
-                  <span className="material-symbols-outlined text-primary text-4xl">workspace_premium</span>
-                </div>
-                <h3 className="text-xl font-bold text-white">Upgrade to Hazem Pro</h3>
-                <p className="text-text-muted text-sm leading-relaxed">
-                  Get superior workout logic across the GPT-5.2 powered "Hazem Pro" for just $5/month.
-                </p>
-                <div className="flex flex-col w-full gap-3 mt-4">
-                  <button
-                    onClick={handleUpgrade}
-                    className="w-full py-4 rounded-2xl bg-primary hover:bg-primary/90 text-surface-dark font-black transition-all shadow-lg active:scale-95"
-                  >
-                    SUBSCRIBE NOW - $5/MO
-                  </button>
-                  <button
-                    onClick={() => setShowSubscribeModal(false)}
-                    className="w-full py-3 rounded-xl text-text-muted hover:text-white text-xs font-bold transition-colors"
-                  >
-                    Maybe later
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
 
         {messages.map((message) => (
@@ -356,7 +309,7 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
             <div className={`flex flex-col gap-2 ${message.role === 'user' ? 'items-end' : ''} max-w-[calc(100%-3rem)]`}>
               <div className={`flex items-baseline gap-2 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
                 <span className={`${message.role === 'assistant' ? (isPro ? 'text-primary' : 'text-emerald-400') : 'text-white'} text-sm font-bold`}>
-                  {message.role === 'assistant' ? (isPro ? 'Hazem Pro' : 'Hazem') : t('common.you', 'You')}
+                  {message.role === 'assistant' ? (isPro ? 'Hazem Pro' : 'Hazem Mini') : t('common.you', 'You')}
                 </span>
                 <span className="text-text-muted text-xs">{format(message.timestamp, 'h:mm a')}</span>
               </div>
