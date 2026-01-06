@@ -409,6 +409,22 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
       {/* Composer Area */}
       <div className="px-4 pb-6 lg:px-40 pt-2 bg-gradient-to-t from-background-dark via-background-dark to-transparent z-10">
         <div className="max-w-[960px] mx-auto flex flex-col gap-3">
+          {userProfile?.is_pro && !isPro && (
+            <div className="flex items-center justify-between px-4 py-2 bg-primary/10 border border-primary/20 rounded-xl animate-[fadeIn_0.5s_ease-out]">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-sm animate-pulse">info</span>
+                <p className="text-[10px] text-primary font-bold uppercase tracking-wider">
+                  You're in Base mode. Switch to Pro for GPT-5.2 precision.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsPro(true)}
+                className="text-[10px] bg-primary text-surface-dark px-2 py-0.5 rounded font-black uppercase hover:scale-105 transition-transform"
+              >
+                Switch Now
+              </button>
+            </div>
+          )}
           {/* Input Bar */}
           <form onSubmit={handleSubmit} className="relative flex items-center w-full bg-surface-highlight rounded-2xl border border-white/5 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50 transition-all shadow-xl min-h-[56px]">
             <input
