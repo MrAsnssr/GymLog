@@ -14,6 +14,7 @@ import { FoodHistory } from './pages/FoodHistory'
 import { Assistant } from './pages/Assistant'
 import { ProfilePage } from './pages/Profile'
 import { AdminPage } from './pages/Admin'
+import ProFeatures from './pages/ProFeatures'
 
 function App() {
   return (
@@ -115,6 +116,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <AdminPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pro"
+            element={
+              <ProtectedRoute>
+                <ProFeatures />
               </ProtectedRoute>
             }
           />

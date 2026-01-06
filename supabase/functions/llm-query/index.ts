@@ -76,17 +76,26 @@ serve(async (req) => {
 
     const openai = new OpenAI({ apiKey: openaiApiKey })
 
-    // Verify subscription status if Pro is requested
-    let effectiveIsPro = false
-    if (isPro) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_pro')
-        .eq('user_id', userId)
-        .single()
+    // Fetch user profile with personalization settings
+    const { data: dbProfile } = await supabase
+      .from('profiles')
+      .select('is_pro, weight_unit, ai_language, calorie_goal, protein_goal, carb_goal, fat_goal, custom_instructions')
+      .eq('user_id', userId)
+      .single()
 
-      effectiveIsPro = profile?.is_pro || false
-    }
+    // Verify subscription status if Pro is requested
+    const effectiveIsPro = isPro && (dbProfile?.is_pro || false)
+
+    // Get personalization settings
+    const weightUnit = dbProfile?.weight_unit || 'lbs'
+    const aiLanguage = dbProfile?.ai_language || 'ar'
+    const customInstructions = effectiveIsPro ? (dbProfile?.custom_instructions || '') : ''
+    const goals = effectiveIsPro ? {
+      calories: dbProfile?.calorie_goal,
+      protein: dbProfile?.protein_goal,
+      carbs: dbProfile?.carb_goal,
+      fat: dbProfile?.fat_goal
+    } : null
 
 
     // Define function schemas for OpenAI
@@ -171,11 +180,27 @@ Use this information to personalize your advice. For example:
       }
     }
 
+    // Build goals context for Pro users
+    let goalsContext = ''
+    if (goals && (goals.calories || goals.protein || goals.carbs || goals.fat)) {
+      const goalParts = []
+      if (goals.calories) goalParts.push(`Calories: ${goals.calories} kcal`)
+      if (goals.protein) goalParts.push(`Protein: ${goals.protein}g`)
+      if (goals.carbs) goalParts.push(`Carbs: ${goals.carbs}g`)
+      if (goals.fat) goalParts.push(`Fat: ${goals.fat}g`)
+      goalsContext = `\nUSER GOALS: ${goalParts.join(', ')}\nAfter logging food, mention daily totals vs goals if known.`
+    }
+
+    // Build custom instructions context for Pro users
+    const customInstructionsContext = customInstructions
+      ? `\n\n### USER CUSTOM INSTRUCTIONS (FOLLOW THESE):\n${customInstructions}`
+      : ''
+
     // Build messages with conversation history
     const systemMessage = {
       role: 'system',
-      content: `${userProfileContext}
-You are ${effectiveIsPro ? 'Hazem Pro' : 'Hazem'}, a fitness data assistant. Your job is simple: log data and retrieve data. No narcissism, no coaching, no enthusiasm.
+      content: `${userProfileContext}${goalsContext}
+You are ${effectiveIsPro ? 'Hazem Pro' : 'Hazem'}, a fitness data assistant. Your job is simple: log data and retrieve data. No narcissism, no coaching, no enthusiasm. NEVER give advice.
 
 ${effectiveIsPro ? 'As the Pro version, you use the advanced GPT-5.2 model for superior precision and complex multi-set logic.' : 'You are the base version using GPT-5 Mini for fast, efficient logging.'}
 
@@ -185,15 +210,20 @@ ${effectiveIsPro ? 'As the Pro version, you use the advanced GPT-5.2 model for s
    - Weights/machines: Need weight + reps
    - Bodyweight (pushups, etc): weight_lbs=0, just reps
    - Cardio: weight_lbs=0, reps=minutes
-3. Missing data? Just ask briefly: "كم؟" or "الوزن؟"
+3. Missing data? Just ask briefly: "كم؟" or "الوزن?"
 4. Save exercise names in English.
+5. Weight unit preference: ${weightUnit}
+
+### DATA VALIDATION:
+- If reps > 30 for heavy lifts (bench, squat, deadlift), ask to confirm: "50 تكرار؟ تأكد"
+- If weight seems extreme (>500 lbs), ask to confirm
 
 ### RESPONSE STYLE:
-- Speak Arabic (Omani dialect is fine)
+- Speak ${aiLanguage === 'en' ? 'English' : 'Arabic (Omani dialect is fine)'}
 - Be brief and direct
-- After logging: just confirm what was saved. Example: "تم: Bench Press, 135 lbs, 3x10"
+- After logging: just confirm what was saved. Example: "تم: Bench Press, 135 ${weightUnit}, 3x10"
 - No motivational phrases. No "كفو", "وحش", "يا بطل", etc.
-- Just data in, data out.`
+- NEVER give advice or recommendations. Just data in, data out.${customInstructionsContext}`
     }
 
     console.log('[DEBUG] Received history length:', history?.length)

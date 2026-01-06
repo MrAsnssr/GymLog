@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Profile } from '../lib/types'
 import { MainLayout } from '../components/layout/MainLayout'
+import AIPreferences from '../components/settings/AIPreferences'
 
 export function ProfilePage() {
   const { user } = useAuth()
@@ -275,6 +276,11 @@ export function ProfilePage() {
                 </button>
               </div>
             </form>
+          </div>
+
+          {/* AI Preferences Section */}
+          <div className="mt-8">
+            <AIPreferences />
           </div>
         </div>
       </div>
