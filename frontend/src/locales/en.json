@@ -38,9 +38,21 @@
     "auth": {
         "login": "Login",
         "signup": "Sign Up",
-        "email": "Email",
+        "email": "Email Address",
         "password": "Password",
-        "sign_in": "Sign In"
+        "sign_in": "Sign In",
+        "create_account": "Create Account",
+        "welcome_back": "Welcome Back, Beast",
+        "join_legend": "Join the Legend",
+        "login_prompt": "Enter your credentials to continue your journey.",
+        "signup_prompt": "Step onto the field and start tracking like a pro.",
+        "no_account": "Don't have an account?",
+        "have_account": "Already have an account?",
+        "display_name": "What should we call you?",
+        "display_name_placeholder": "Your name (optional)",
+        "signing_in": "Signing you in...",
+        "creating_account": "Creating your legend...",
+        "success_signup": "Legend created! Heading to locker room..."
     },
     "dashboard": {
         "welcome": "Welcome back! Your Coach is ready. What did you eat or lift today? 💪",

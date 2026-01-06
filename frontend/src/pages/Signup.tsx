@@ -1,8 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
+import { AuthLanguageToggle } from '../components/auth/AuthLanguageToggle'
 
 export function Signup() {
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -32,7 +36,7 @@ export function Signup() {
       setSuccess(true)
       setTimeout(() => {
         navigate('/login')
-      }, 2000)
+      }, 3000)
     } catch (err: any) {
       setError(err.message || 'An error occurred')
     } finally {
@@ -40,101 +44,158 @@ export function Signup() {
     }
   }
 
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-md text-center">
-          <div className="text-green-600 text-lg">
-            Account created successfully! Redirecting to login...
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-md">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
-          </h2>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSignup}>
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-              {error}
-            </div>
-          )}
-          <div className="rounded-md shadow-sm space-y-4">
-            <div>
-              <label htmlFor="displayName" className="block text-sm font-medium text-gray-700">
-                Display Name
-              </label>
-              <input
-                id="displayName"
-                name="displayName"
-                type="text"
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="Your name (optional)"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
+    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-background-dark font-body">
+      <AuthLanguageToggle />
+
+      {/* Dynamic Background */}
+      <div className="absolute inset-0 z-0">
+        <img
+          src="/C:/Users/abdul/.gemini/antigravity/brain/f8d8e81d-2e4e-4ae6-af3c-79f7c5ee131e/gym_background_abstract_1767619185552.png"
+          alt="Gym Background"
+          className="h-full w-full object-cover opacity-30 scale-105 blur-[2px]"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-background-dark/80 via-transparent to-background-dark/90"></div>
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="relative z-10 w-full max-w-[440px] px-6 mx-auto"
+      >
+        <div className="bg-surface-dark/40 backdrop-blur-2xl border border-white/10 rounded-[32px] p-8 sm:p-10 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.5)]">
+          {/* Logo / Title Section */}
+          <div className="text-center mb-10">
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 mb-6"
+            >
+              <span className="material-symbols-outlined text-primary text-4xl">person_add</span>
+            </motion.div>
+            <h2 className="text-3xl font-bold font-display text-white mb-2 tracking-tight">
+              {t('auth.join_legend')}
+            </h2>
+            <p className="text-text-muted text-sm px-4">
+              {t('auth.signup_prompt')}
+            </p>
           </div>
 
-          <div>
+          <form className="space-y-5" onSubmit={handleSignup}>
+            <AnimatePresence mode="wait">
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-2xl text-sm flex items-start gap-3"
+                >
+                  <span className="material-symbols-outlined text-lg">error</span>
+                  <span>{error}</span>
+                </motion.div>
+              )}
+
+              {success && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="bg-primary/10 border border-primary/20 text-primary px-4 py-3 rounded-2xl text-sm flex items-start gap-3"
+                >
+                  <span className="material-symbols-outlined text-lg">check_circle</span>
+                  <span>{t('auth.success_signup')}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-text-muted uppercase tracking-widest ps-4">
+                  {t('auth.display_name')}
+                </label>
+                <div className="relative group">
+                  <span className="absolute inset-y-0 start-4 flex items-center text-text-muted group-focus-within:text-primary transition-colors">
+                    <span className="material-symbols-outlined text-xl">badge</span>
+                  </span>
+                  <input
+                    type="text"
+                    className="w-full bg-background-dark/50 border border-white/5 rounded-2xl py-3.5 ps-12 pe-4 text-white placeholder:text-white/20 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all text-base"
+                    placeholder={t('auth.display_name_placeholder')}
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-text-muted uppercase tracking-widest ps-4">
+                  {t('auth.email')}
+                </label>
+                <div className="relative group">
+                  <span className="absolute inset-y-0 start-4 flex items-center text-text-muted group-focus-within:text-primary transition-colors">
+                    <span className="material-symbols-outlined text-xl">mail</span>
+                  </span>
+                  <input
+                    type="email"
+                    required
+                    className="w-full bg-background-dark/50 border border-white/5 rounded-2xl py-3.5 ps-12 pe-4 text-white placeholder:text-white/20 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all text-base"
+                    placeholder="name@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-text-muted uppercase tracking-widest ps-4">
+                  {t('auth.password')}
+                </label>
+                <div className="relative group">
+                  <span className="absolute inset-y-0 start-4 flex items-center text-text-muted group-focus-within:text-primary transition-colors">
+                    <span className="material-symbols-outlined text-xl">lock</span>
+                  </span>
+                  <input
+                    type="password"
+                    required
+                    className="w-full bg-background-dark/50 border border-white/5 rounded-2xl py-3.5 ps-12 pe-4 text-white placeholder:text-white/20 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all text-base"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
             <button
               type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+              disabled={loading || success}
+              className="w-full bg-primary hover:bg-primary/90 text-surface-dark font-bold py-4 rounded-2xl transition-all shadow-[0_8px_20px_-4px_rgba(19,236,91,0.4)] hover:shadow-[0_12px_24px_-4px_rgba(19,236,91,0.6)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group mt-8"
             >
-              {loading ? 'Creating account...' : 'Sign up'}
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-surface-dark/30 border-t-surface-dark rounded-full animate-spin"></div>
+                  <span>{t('auth.creating_account')}</span>
+                </>
+              ) : (
+                <>
+                  <span>{t('auth.create_account')}</span>
+                  <span className="material-symbols-outlined text-xl group-hover:translate-x-1 group-hover:rtl:-translate-x-1 transition-transform">arrow_forward</span>
+                </>
+              )}
             </button>
-          </div>
 
-          <div className="text-center">
-            <Link
-              to="/login"
-              className="text-indigo-600 hover:text-indigo-500 text-sm"
-            >
-              Already have an account? Sign in
-            </Link>
-          </div>
-        </form>
-      </div>
+            <div className="text-center pt-4">
+              <Link
+                to="/login"
+                className="text-text-muted hover:text-white text-sm transition-colors flex items-center justify-center gap-2"
+              >
+                {t('auth.have_account')} <span className="text-primary font-bold">{t('auth.login')}</span>
+              </Link>
+            </div>
+          </form>
+        </div>
+      </motion.div>
     </div>
   )
 }
