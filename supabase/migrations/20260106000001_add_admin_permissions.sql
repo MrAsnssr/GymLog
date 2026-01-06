@@ -11,6 +11,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 DROP POLICY IF EXISTS "Public can view display names" ON profiles;
 DROP POLICY IF EXISTS "Users can view their own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can insert their own profile" ON profiles;
 
 -- Policy: Admin can view all profiles, users can view their own
 CREATE POLICY "Admins can view all profiles"
