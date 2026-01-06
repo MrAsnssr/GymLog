@@ -232,15 +232,15 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
     <div className="flex flex-col h-full relative">
       {/* Sticky Pro Button Header - For non-pro users */}
       {!userProfile?.is_pro && (
-        <div className="sticky top-0 z-50 bg-surface-dark/80 backdrop-blur-sm border-b border-white/5 px-6 py-3 flex justify-center">
+        <div className="sticky top-0 z-50 bg-surface-dark/90 backdrop-blur-sm border-b border-white/5 px-3 py-2 flex justify-center">
           <button
             type="button"
             onClick={() => navigate('/pro')}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-[0_0_20px_rgba(245,158,11,0.5)] hover:scale-105 animate-pulse"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-all bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg hover:scale-105"
           >
-            <span className="material-symbols-outlined text-base">star</span>
-            Upgrade to Hazem Pro
-            <span className="opacity-80">$5/mo</span>
+            <span className="material-symbols-outlined text-sm">star</span>
+            <span className="hidden sm:inline">Upgrade to</span> Hazem Pro
+            <span className="opacity-80 text-[9px] sm:text-xs">$5/mo</span>
           </button>
         </div>
       )}
