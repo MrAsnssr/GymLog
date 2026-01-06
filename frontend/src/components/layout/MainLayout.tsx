@@ -29,10 +29,10 @@ export function MainLayout({ children, title, showAssistantStatus = true, action
             <header className="h-18 min-h-[72px] flex items-center justify-between px-6 lg:px-10 border-b border-surface-highlight bg-surface-dark/50 backdrop-blur-md z-10">
                 <div className="flex items-center gap-4">
                     {/* Logo */}
-                    <div className="flex items-center gap-2">
+                    <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                         <span className="material-symbols-outlined text-primary text-2xl font-bold">bolt</span>
                         <h1 className="text-white text-xl font-bold tracking-tight font-display">MUSCLE LOG</h1>
-                    </div>
+                    </Link>
 
                     {showAssistantStatus && (
                         <div className="hidden sm:flex items-center gap-2 ml-4 pl-4 border-l border-surface-highlight">
