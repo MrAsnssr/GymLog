@@ -33,10 +33,13 @@ interface FoodLog {
 export function AdminPage() {
     const { user } = useAuth()
     const { logs, clearLogs, enabled, setEnabled } = useAiDebug()
-    const [activeTab, setActiveTab] = useState<'workouts' | 'food' | 'debug'>('workouts')
+    const [activeTab, setActiveTab] = useState<'workouts' | 'food' | 'users' | 'debug'>('workouts')
     const [workoutSets, setWorkoutSets] = useState<WorkoutSet[]>([])
     const [foodLogs, setFoodLogs] = useState<FoodLog[]>([])
+    const [profiles, setProfiles] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
+
+    const isAdmin = user?.email === 'asnssrr@gmail.com'
 
     useEffect(() => {
         if (user) {
@@ -75,6 +78,16 @@ export function AdminPage() {
             if (foods) {
                 setFoodLogs(foods)
             }
+
+            // Load all profiles
+            const { data: allProfiles } = await supabase
+                .from('profiles')
+                .select('*')
+                .order('created_at', { ascending: false })
+
+            if (allProfiles) {
+                setProfiles(allProfiles)
+            }
         } catch (err) {
             console.error('Error loading admin data:', err)
         } finally {
@@ -92,6 +105,49 @@ export function AdminPage() {
         if (!confirm('Delete this food log?')) return
         await supabase.from('food_logs').delete().eq('id', id)
         setFoodLogs(prev => prev.filter(f => f.id !== id))
+    }
+
+    const togglePro = async (userId: string, currentStatus: boolean) => {
+        const newStatus = !currentStatus
+        let endsAt = null
+
+        if (newStatus) {
+            const months = prompt('How many months of Pro?', '1')
+            if (months === null) return
+            const date = new Date()
+            date.setMonth(date.getMonth() + parseInt(months))
+            endsAt = date.toISOString()
+        }
+
+        const { error } = await supabase
+            .from('profiles')
+            .update({
+                is_pro: newStatus,
+                subscription_ends_at: endsAt
+            })
+            .eq('user_id', userId)
+
+        if (error) {
+            alert('Error updating Pro status: ' + error.message)
+        } else {
+            setProfiles(prev => prev.map(p => p.user_id === userId ? { ...p, is_pro: newStatus, subscription_ends_at: endsAt } : p))
+        }
+    }
+
+    if (!isAdmin) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-background-dark text-white p-6">
+                <span className="material-symbols-outlined text-red-500 text-6xl mb-4">gpp_maybe</span>
+                <h1 className="text-2xl font-black mb-2 uppercase tracking-tighter">Access Restricted</h1>
+                <p className="text-text-muted text-center max-w-sm">This area is reserved for the High Council of Muscle. You do not have the required permissions.</p>
+                <button
+                    onClick={() => window.location.href = '/'}
+                    className="mt-8 px-8 py-3 bg-primary text-surface-dark font-bold rounded-xl"
+                >
+                    Return to Dashboard
+                </button>
+            </div>
+        )
     }
 
     if (loading) {
@@ -139,6 +195,15 @@ export function AdminPage() {
                             }`}
                     >
                         🍖 Food ({foodLogs.length})
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('users')}
+                        className={`px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all ${activeTab === 'users'
+                            ? 'bg-primary text-surface-dark'
+                            : 'bg-surface-highlight text-text-muted hover:text-white'
+                            }`}
+                    >
+                        👥 Users ({profiles.length})
                     </button>
                     <button
                         onClick={() => setActiveTab('debug')}
@@ -247,7 +312,7 @@ export function AdminPage() {
                                 </tbody>
                             </table>
                         </div>
-                    ) : (
+                    ) : activeTab === 'food' ? (
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead className="bg-surface-highlight/50">
@@ -300,6 +365,55 @@ export function AdminPage() {
                                             </tr>
                                         ))
                                     )}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-surface-highlight/50">
+                                    <tr className="text-left text-text-muted uppercase text-xs tracking-wider">
+                                        <th className="px-4 py-3">User</th>
+                                        <th className="px-4 py-3">Status</th>
+                                        <th className="px-4 py-3">Pro Until</th>
+                                        <th className="px-4 py-3">Joined</th>
+                                        <th className="px-4 py-3">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-surface-highlight">
+                                    {profiles.map((profile) => (
+                                        <tr key={profile.user_id} className="hover:bg-surface-highlight/20 transition-colors">
+                                            <td className="px-4 py-3">
+                                                <div className="flex flex-col">
+                                                    <span className="text-white font-bold">{profile.display_name || 'Anonymous Orc'}</span>
+                                                    <span className="text-[10px] text-text-muted font-mono">{profile.user_id}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                {profile.is_pro ? (
+                                                    <span className="px-2 py-1 rounded bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/30">PRO MEMBER</span>
+                                                ) : (
+                                                    <span className="px-2 py-1 rounded bg-surface-highlight text-text-muted text-[10px] font-bold uppercase tracking-wider">BASE USER</span>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-3 text-text-muted font-mono text-xs">
+                                                {profile.subscription_ends_at ? format(new Date(profile.subscription_ends_at), 'yyyy-MM-dd') : '-'}
+                                            </td>
+                                            <td className="px-4 py-3 text-text-muted text-xs">
+                                                {format(new Date(profile.created_at), 'MMM d, yyyy')}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <button
+                                                    onClick={() => togglePro(profile.user_id, profile.is_pro)}
+                                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border ${profile.is_pro
+                                                        ? 'bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500 hover:text-white'
+                                                        : 'bg-primary/10 border-primary/30 text-primary hover:bg-primary hover:text-surface-dark'}`}
+                                                >
+                                                    {profile.is_pro ? 'Revoke Pro' : 'Grant Pro'}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
                         </div>

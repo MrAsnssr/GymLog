@@ -61,6 +61,16 @@ export function MainLayout({ children, title, showAssistantStatus = true, action
                         <span className="hidden sm:inline">{i18n.language.startsWith('ar') ? 'English' : 'العربية'}</span>
                     </button>
 
+                    {user?.email === 'asnssrr@gmail.com' && (
+                        <Link
+                            to="/admin"
+                            className="flex items-center justify-center h-10 w-10 rounded-lg hover:bg-surface-highlight text-primary hover:text-primary transition-colors"
+                            title="Admin Panel"
+                        >
+                            <span className="material-symbols-outlined text-[20px]">admin_panel_settings</span>
+                        </Link>
+                    )}
+
                     {/* Settings */}
                     <Link
                         to="/profile"

@@ -19,6 +19,7 @@ interface UserProfile {
   height_cm: number | null
   weight_kg: number | null
   age: number | null
+  is_pro: boolean
 }
 
 export interface LLMChatRef {
@@ -61,6 +62,7 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
   const [messages, setMessages] = useState<Message[]>(getInitialMessages)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isPro, setIsPro] = useState(false)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -114,12 +116,16 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('display_name, gender, height_cm, weight_kg, age')
+          .select('display_name, gender, height_cm, weight_kg, age, is_pro')
           .eq('user_id', user.id)
           .single()
 
         if (error) throw error
-        if (data) setUserProfile(data)
+        if (data) {
+          setUserProfile(data)
+          // If user isn't pro, make sure pro mode is off
+          if (!data.is_pro) setIsPro(false)
+        }
       } catch (err) {
         console.error('Failed to load profile:', err)
       }
@@ -163,7 +169,8 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
           body: JSON.stringify({
             query: input,
             history,
-            userProfile: userProfile  // Send user profile to Coach Hazzem
+            userProfile: userProfile,
+            isPro: isPro
           }),
         }
       )
@@ -210,6 +217,26 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
   }
 
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false)
+
+  const handleUpgrade = async () => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+        }
+      )
+      const data = await response.json()
+      if (data.url) window.location.href = data.url
+    } catch (err) {
+      console.error('Checkout failed:', err)
+    }
+  }
 
   // Auto-hide confirmation after 3 seconds
   useEffect(() => {
@@ -257,7 +284,60 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
               {showResetConfirm ? (t('common.confirm') || 'Confirm?') : (t('common.clear') || 'Clear')}
             </button>
           )}
+
+          {/* Hazem Pro Toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              if (userProfile?.is_pro) {
+                setIsPro(!isPro)
+              } else {
+                setShowSubscribeModal(true)
+              }
+            }}
+            className={`relative z-50 flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] transition-all border ${isPro
+              ? 'bg-gradient-to-r from-primary to-emerald-500 text-surface-dark border-transparent shadow-[0_0_15px_rgba(19,236,91,0.4)] scale-105'
+              : 'bg-surface-highlight/20 text-text-muted border-white/5 hover:border-white/10'}`}
+          >
+            <span className={`material-symbols-outlined text-sm ${isPro ? 'animate-pulse' : ''}`}>
+              {isPro ? 'workspace_premium' : 'bolt'}
+            </span>
+            {isPro ? 'Hazem Pro (5.2)' : 'Hazem Base'}
+            {!userProfile?.is_pro && <span className="ms-1 opacity-50">$5/mo</span>}
+          </button>
         </div>
+
+        {/* Subscribe Modal */}
+        {showSubscribeModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm">
+            <div className="bg-surface-highlight p-8 rounded-3xl border border-white/10 max-w-sm w-full shadow-2xl animate-[fadeIn_0.2s_ease-out]">
+              <div className="flex flex-col items-center text-center gap-4">
+                <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center mb-2">
+                  <span className="material-symbols-outlined text-primary text-4xl">workspace_premium</span>
+                </div>
+                <h3 className="text-xl font-bold text-white">Upgrade to Hazem Pro</h3>
+                <p className="text-text-muted text-sm leading-relaxed">
+                  Get superior workout logic across the GPT-5.2 powered "Hazem Pro" for just $5/month.
+                </p>
+                <div className="flex flex-col w-full gap-3 mt-4">
+                  <button
+                    onClick={handleUpgrade}
+                    className="w-full py-4 rounded-2xl bg-primary hover:bg-primary/90 text-surface-dark font-black transition-all shadow-lg active:scale-95"
+                  >
+                    SUBSCRIBE NOW - $5/MO
+                  </button>
+                  <button
+                    onClick={() => setShowSubscribeModal(false)}
+                    className="w-full py-3 rounded-xl text-text-muted hover:text-white text-xs font-bold transition-colors"
+                  >
+                    Maybe later
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
 
         {messages.map((message) => (
           <div
@@ -275,8 +355,8 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
 
             <div className={`flex flex-col gap-2 ${message.role === 'user' ? 'items-end' : ''} max-w-[calc(100%-3rem)]`}>
               <div className={`flex items-baseline gap-2 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                <span className={`${message.role === 'assistant' ? 'text-primary' : 'text-white'} text-sm font-bold`}>
-                  {message.role === 'assistant' ? 'Coach Hazzem' : t('common.you', 'You')}
+                <span className={`${message.role === 'assistant' ? (isPro ? 'text-primary' : 'text-emerald-400') : 'text-white'} text-sm font-bold`}>
+                  {message.role === 'assistant' ? (isPro ? 'Hazem Pro' : 'Hazem') : t('common.you', 'You')}
                 </span>
                 <span className="text-text-muted text-xs">{format(message.timestamp, 'h:mm a')}</span>
               </div>
@@ -312,7 +392,7 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
               <span className="material-symbols-outlined text-primary text-xl animate-pulse">smart_toy</span>
             </div>
             <div className="flex flex-col gap-2">
-              <span className="text-primary text-sm font-bold">Coach Hazzem</span>
+              <span className="text-primary text-sm font-bold">{isPro ? 'Hazem Pro' : 'Hazem'}</span>
               <div className="bg-surface-highlight rounded-2xl rounded-tl-none p-4 shadow-sm">
                 <div className="flex gap-1.5">
                   <div className="w-2.5 h-2.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>

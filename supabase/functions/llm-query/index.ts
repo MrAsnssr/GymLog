@@ -54,7 +54,7 @@ serve(async (req) => {
     }
 
     // Get request body
-    const { query, user_id: providedUserId, history, userProfile } = await req.json()
+    const { query, user_id: providedUserId, history, userProfile, isPro } = await req.json()
     if (!query) {
       return new Response(
         JSON.stringify({ error: 'Missing query' }),
@@ -75,6 +75,19 @@ serve(async (req) => {
     }
 
     const openai = new OpenAI({ apiKey: openaiApiKey })
+
+    // Verify subscription status if Pro is requested
+    let effectiveIsPro = false
+    if (isPro) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_pro')
+        .eq('user_id', userId)
+        .single()
+
+      effectiveIsPro = profile?.is_pro || false
+    }
+
 
     // Define function schemas for OpenAI
     const functions = [
@@ -162,26 +175,25 @@ Use this information to personalize your advice. For example:
     const systemMessage = {
       role: 'system',
       content: `${userProfileContext}
-You are Coach Hazzem (كوتش حازم), a hyper-local, high-energy Omani fitness legend.
+You are ${effectiveIsPro ? 'Hazem Pro' : 'Hazem'}, a fitness data assistant. Your job is simple: log data and retrieve data. No narcissism, no coaching, no enthusiasm.
 
-### 🔴 MANDATORY LOGGING PROTOCOL (CORE MISSION):
-1. **TOOL FIRST**: If the user provides workout or food data (e.g. "I did 10 pushups", "I ate pizza"):
-   - **YOU MUST CALL A TOOL.** DO NOT just talk.
-   - **NEVER SAY "I SAVED IT"** unless you have actually triggered the tool.
-2. **DATA RULES**:
-   - **STRENGTH EXERCISES** (weights, machines): Require Weight + Reps.
-   - **BODYWEIGHT EXERCISES** (pushups, pullups): Use weight_lbs=0, only need Reps.
-   - **CARDIO EXERCISES** (treadmill, running, cycling): Use weight_lbs=0, reps=duration in minutes. Example: "30 min treadmill" -> weight_lbs: 0, reps: 30 (meaning 30 minutes).
-   - If data is missing: **ASK** in Omani Arabic. Example: "كم دقيقة يا بطل؟" (How many minutes, champ?).
-3. **ENGLISH DATA**: Always save exercise names in English (e.g. "Tafteeh" -> "Chest Fly", "مشي" -> "Treadmill Walk").
+${effectiveIsPro ? 'As the Pro version, you use the advanced GPT-5.2 model for superior precision and complex multi-set logic.' : 'You are the base version using GPT-5 Mini for fast, efficient logging.'}
 
-### 🇴🇲 PERSONA & DIALECT:
-- **ALWAYS OMANI ARABIC.** "كفو", "وحش", "أفا عليك".
-- **CONFIRMATION**: After a successful log, confirm exactly what you saved:
-  For strength: "Exercise is [English Name], Weight is [X] lbs, [N] sets, [N] reps"
-  For cardio: "Exercise is [English Name], Duration: [X] minutes"
-  (Followed by Omani motivation).
-- **MEMORY**: Always check the history. If you just asked for details and the user gave them, log it immediately.`
+### LOGGING RULES:
+1. If user provides workout or food data, CALL THE TOOL immediately. Don't talk about it.
+2. Data requirements:
+   - Weights/machines: Need weight + reps
+   - Bodyweight (pushups, etc): weight_lbs=0, just reps
+   - Cardio: weight_lbs=0, reps=minutes
+3. Missing data? Just ask briefly: "كم؟" or "الوزن؟"
+4. Save exercise names in English.
+
+### RESPONSE STYLE:
+- Speak Arabic (Omani dialect is fine)
+- Be brief and direct
+- After logging: just confirm what was saved. Example: "تم: Bench Press, 135 lbs, 3x10"
+- No motivational phrases. No "كفو", "وحش", "يا بطل", etc.
+- Just data in, data out.`
     }
 
     console.log('[DEBUG] Received history length:', history?.length)
@@ -205,7 +217,7 @@ You are Coach Hazzem (كوتش حازم), a hyper-local, high-energy Omani fitne
 
     // Call OpenAI
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: effectiveIsPro ? 'gpt-5.2' : 'gpt-5-mini',
       messages: chatMessages,
       functions,
       function_call: 'auto',
@@ -438,16 +450,14 @@ You are Coach Hazzem (كوتش حازم), a hyper-local, high-energy Omani fitne
 
     // Get final response - STRICT VALIDATION
     const finalCompletion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: effectiveIsPro ? 'gpt-5.2' : 'gpt-5-mini',
       messages: [
         {
-          role: 'system', content: `You are Coach Hazzem (كوتش حازم).
-CRITICAL INSTRUCTION:
-Check the "Data" JSON below carefully.
-- IF "success": true AND "logged" data is present: Confirm specifically what was saved (e.g. "سجلت لك [Exercise Name]").
-- IF "success" is missing or false: Apologize in Arabic and say you couldn't save it ("السموحة يا وحش، ما قدرت أسجلها...").
-- IF "logged" data is missing items the user asked for: Apologize for the missing items.
-- ALWAYS speak Omani Arabic.` },
+          role: 'system', content: `You are a data assistant. Be brief.
+- IF success=true: Just confirm what was saved. Example: "تم: [Exercise], [weight], [sets]x[reps]"
+- IF success=false: Say "ما تسجل" (didn't save)
+- No motivation. No enthusiasm. Just facts.
+- Speak Arabic.` },
         { role: 'user', content: `User query: "${query}". Data: ${JSON.stringify(result)}. Respond naturally based on the data.` },
       ],
     })

@@ -51,7 +51,7 @@ export function Signup() {
       {/* Dynamic Background */}
       <div className="absolute inset-0 z-0">
         <img
-          src="/C:/Users/abdul/.gemini/antigravity/brain/f8d8e81d-2e4e-4ae6-af3c-79f7c5ee131e/gym_background_abstract_1767619185552.png"
+          src="/background.png"
           alt="Gym Background"
           className="h-full w-full object-cover opacity-30 scale-105 blur-[2px]"
         />

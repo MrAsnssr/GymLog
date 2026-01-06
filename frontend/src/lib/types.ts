@@ -8,6 +8,8 @@ export interface Profile {
   height_cm: number | null
   weight_kg: number | null
   age: number | null
+  is_pro: boolean
+  subscription_ends_at: string | null
   created_at: string
   updated_at: string
 }
