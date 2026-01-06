@@ -230,6 +230,21 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
 
   return (
     <div className="flex flex-col h-full relative">
+      {/* Sticky Pro Button Header - For non-pro users */}
+      {!userProfile?.is_pro && (
+        <div className="sticky top-0 z-50 bg-surface-dark/80 backdrop-blur-sm border-b border-white/5 px-6 py-3 flex justify-center">
+          <button
+            type="button"
+            onClick={() => navigate('/pro')}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-[0_0_20px_rgba(245,158,11,0.5)] hover:scale-105 animate-pulse"
+          >
+            <span className="material-symbols-outlined text-base">star</span>
+            Upgrade to Hazem Pro
+            <span className="opacity-80">$5/mo</span>
+          </button>
+        </div>
+      )}
+
       {/* Chat Stream */}
       <div className="flex-1 overflow-y-auto px-6 lg:px-20 py-8 flex flex-col gap-8 scroll-smooth" id="chat-container">
         {/* Date Separator with Clear Chat */}
@@ -267,28 +282,21 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
             </button>
           )}
 
-          {/* Hazem Pro Toggle */}
-          <button
-            type="button"
-            onClick={() => {
-              if (userProfile?.is_pro) {
-                setIsPro(!isPro)
-              } else {
-                navigate('/pro')
-              }
-            }}
-            className={`relative z-50 flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] transition-all border ${isPro
-              ? 'bg-gradient-to-r from-primary to-emerald-500 text-surface-dark border-transparent shadow-[0_0_15px_rgba(19,236,91,0.4)] scale-105'
-              : userProfile?.is_pro
-                ? 'bg-surface-highlight/20 text-text-muted border-white/5 hover:border-white/10'
-                : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-transparent shadow-[0_0_15px_rgba(245,158,11,0.4)] hover:scale-105 animate-pulse'}`}
-          >
-            <span className={`material-symbols-outlined text-sm ${isPro ? 'animate-pulse' : ''}`}>
-              {isPro ? 'workspace_premium' : (userProfile?.is_pro ? 'bolt' : 'star')}
-            </span>
-            {isPro ? 'Hazem Pro (5.2)' : (userProfile?.is_pro ? 'Hazem Mini' : 'Get Pro')}
-            {!userProfile?.is_pro && <span className="ms-1 opacity-80">$5/mo</span>}
-          </button>
+          {/* Hazem Pro/Mini Toggle - Only for Pro subscribers */}
+          {userProfile?.is_pro && (
+            <button
+              type="button"
+              onClick={() => setIsPro(!isPro)}
+              className={`relative z-50 flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] transition-all border ${isPro
+                ? 'bg-gradient-to-r from-primary to-emerald-500 text-surface-dark border-transparent shadow-[0_0_15px_rgba(19,236,91,0.4)] scale-105'
+                : 'bg-surface-highlight/20 text-text-muted border-white/5 hover:border-white/10'}`}
+            >
+              <span className={`material-symbols-outlined text-sm ${isPro ? 'animate-pulse' : ''}`}>
+                {isPro ? 'workspace_premium' : 'bolt'}
+              </span>
+              {isPro ? 'Hazem Pro (5.2)' : 'Hazem Mini'}
+            </button>
+          )}
         </div>
 
 
