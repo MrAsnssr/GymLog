@@ -4,13 +4,14 @@ import { useAuth } from '../../contexts/AuthContext'
 
 interface AIPreferences {
     weight_unit: 'lbs' | 'kg'
-    ai_language: 'ar' | 'en'
+    ai_language: 'ar' | 'en' | 'auto'
     calorie_goal: number | null
     protein_goal: number | null
     carb_goal: number | null
     fat_goal: number | null
     custom_instructions: string | null
     weekly_email: boolean
+    predict_nutrients: boolean
     is_pro: boolean
 }
 
@@ -30,7 +31,7 @@ export default function AIPreferences() {
     const loadPreferences = async () => {
         const { data, error } = await supabase
             .from('profiles')
-            .select('weight_unit, ai_language, calorie_goal, protein_goal, carb_goal, fat_goal, custom_instructions, weekly_email, is_pro')
+            .select('weight_unit, ai_language, calorie_goal, protein_goal, carb_goal, fat_goal, custom_instructions, weekly_email, predict_nutrients, is_pro')
             .eq('user_id', user?.id)
             .single()
 
@@ -98,8 +99,8 @@ export default function AIPreferences() {
                             <button
                                 onClick={() => savePreferences({ weight_unit: 'lbs' })}
                                 className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${preferences?.weight_unit === 'lbs'
-                                        ? 'bg-primary text-surface-dark'
-                                        : 'bg-white/5 text-white/60 hover:bg-white/10'
+                                    ? 'bg-primary text-surface-dark'
+                                    : 'bg-white/5 text-white/60 hover:bg-white/10'
                                     }`}
                             >
                                 lbs
@@ -107,8 +108,8 @@ export default function AIPreferences() {
                             <button
                                 onClick={() => savePreferences({ weight_unit: 'kg' })}
                                 className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${preferences?.weight_unit === 'kg'
-                                        ? 'bg-primary text-surface-dark'
-                                        : 'bg-white/5 text-white/60 hover:bg-white/10'
+                                    ? 'bg-primary text-surface-dark'
+                                    : 'bg-white/5 text-white/60 hover:bg-white/10'
                                     }`}
                             >
                                 kg
@@ -119,24 +120,34 @@ export default function AIPreferences() {
                     {/* Language */}
                     <div>
                         <label className="block text-sm text-white/60 mb-2">AI Language</label>
-                        <div className="flex gap-2">
+                        <div className="flex gap-1">
                             <button
                                 onClick={() => savePreferences({ ai_language: 'ar' })}
-                                className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${preferences?.ai_language === 'ar'
-                                        ? 'bg-primary text-surface-dark'
-                                        : 'bg-white/5 text-white/60 hover:bg-white/10'
+                                className={`flex-1 py-2 px-1 rounded-lg text-xs font-bold transition-all ${preferences?.ai_language === 'ar'
+                                    ? 'bg-primary text-surface-dark'
+                                    : 'bg-white/5 text-white/60 hover:bg-white/10'
                                     }`}
                             >
                                 عربي
                             </button>
                             <button
                                 onClick={() => savePreferences({ ai_language: 'en' })}
-                                className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${preferences?.ai_language === 'en'
-                                        ? 'bg-primary text-surface-dark'
-                                        : 'bg-white/5 text-white/60 hover:bg-white/10'
+                                className={`flex-1 py-2 px-1 rounded-lg text-xs font-bold transition-all ${preferences?.ai_language === 'en'
+                                    ? 'bg-primary text-surface-dark'
+                                    : 'bg-white/5 text-white/60 hover:bg-white/10'
                                     }`}
                             >
                                 English
+                            </button>
+                            <button
+                                onClick={() => savePreferences({ ai_language: 'auto' as any })}
+                                className={`flex-1 py-2 px-1 rounded-lg text-xs font-bold transition-all ${preferences?.ai_language === 'auto'
+                                    ? 'bg-primary text-surface-dark'
+                                    : 'bg-white/5 text-white/60 hover:bg-white/10'
+                                    }`}
+                                title="No preference / Mixed"
+                            >
+                                Auto
                             </button>
                         </div>
                     </div>
@@ -230,7 +241,7 @@ export default function AIPreferences() {
                 </div>
 
                 {/* Weekly Email */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-2">
                         <span className="material-symbols-outlined text-sm text-white/60">mail</span>
                         <span className="text-sm text-white/80">Weekly Summary Email</span>
@@ -242,6 +253,26 @@ export default function AIPreferences() {
                             } disabled:cursor-not-allowed`}
                     >
                         <div className={`w-5 h-5 bg-white rounded-full transition-transform ${preferences?.weekly_email ? 'translate-x-6' : 'translate-x-0.5'
+                            }`} />
+                    </button>
+                </div>
+
+                {/* Predict Nutrients */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-sm text-white/60">calculate</span>
+                        <div className="flex flex-col">
+                            <span className="text-sm text-white/80">Predict Food Nutrients</span>
+                            <span className="text-[10px] text-white/40">AI will estimate macros if missing</span>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => preferences?.is_pro && savePreferences({ predict_nutrients: !preferences.predict_nutrients })}
+                        disabled={!preferences?.is_pro}
+                        className={`w-12 h-6 rounded-full transition-all ${preferences?.predict_nutrients ? 'bg-primary' : 'bg-white/10'
+                            } disabled:cursor-not-allowed`}
+                    >
+                        <div className={`w-5 h-5 bg-white rounded-full transition-transform ${preferences?.predict_nutrients ? 'translate-x-6' : 'translate-x-0.5'
                             }`} />
                     </button>
                 </div>

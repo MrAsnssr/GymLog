@@ -15,6 +15,7 @@ import { Assistant } from './pages/Assistant'
 import { ProfilePage } from './pages/Profile'
 import { AdminPage } from './pages/Admin'
 import ProFeatures from './pages/ProFeatures'
+import { ExerciseStats } from './pages/ExerciseStats'
 
 function App() {
   return (
@@ -36,6 +37,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <WorkoutHistory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/stats"
+            element={
+              <ProtectedRoute>
+                <ExerciseStats />
               </ProtectedRoute>
             }
           />

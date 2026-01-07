@@ -176,7 +176,8 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
             query: input,
             history,
             userProfile: userProfile,
-            isPro: isPro
+            isPro: isPro,
+            currentTime: new Date().toISOString()
           }),
         }
       )
@@ -280,6 +281,7 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${session?.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
           body: formData,
         }
@@ -314,85 +316,93 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
 
   return (
     <div className="flex flex-col h-full relative">
-      {/* Sticky Pro Button Header - For non-pro users */}
+      {/* Floating Pro Button - For non-pro users */}
       {!userProfile?.is_pro && (
-        <div className="sticky top-0 z-50 bg-surface-dark/90 backdrop-blur-sm border-b border-white/5 px-3 py-2 flex justify-center">
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[45] w-[90%] max-w-sm">
           <button
             type="button"
             onClick={() => navigate('/pro')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-all bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg hover:scale-105"
+            className="w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all bg-gradient-to-r from-primary to-emerald-500 text-surface-dark shadow-[0_8px_30px_rgb(0,0,0,0.5)] hover:scale-[1.02] active:scale-95 group"
           >
-            <span className="material-symbols-outlined text-sm">star</span>
-            <span className="hidden sm:inline">Upgrade to</span> Hazem Pro
-            <span className="opacity-80 text-[9px] sm:text-xs">$5/mo</span>
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform">workspace_premium</span>
+              <div className="flex flex-col items-start translate-y-[1px]">
+                <span className="text-[11px] font-black uppercase tracking-tighter leading-none">Upgrade to Pro</span>
+                <span className="text-[10px] font-bold opacity-80 leading-none">Get GPT-5.2 Precision</span>
+              </div>
+            </div>
+            <div className="bg-white/20 px-2 py-1 rounded-lg text-[10px] font-black">
+              $5/mo
+            </div>
           </button>
         </div>
       )}
 
       {/* Chat Stream */}
-      <div className="flex-1 overflow-y-auto px-6 lg:px-20 py-8 flex flex-col gap-8 scroll-smooth" id="chat-container">
-        {/* Date Separator with Clear Chat */}
-        <div className="flex justify-center items-center gap-3">
-          <span className="text-xs font-medium text-text-muted uppercase tracking-widest bg-surface-highlight/30 px-3 py-1 rounded-full">
-            Today, {format(new Date(), 'h:mm a')}
-          </span>
-          {showResetButton && messages.length > 1 && (
-            <button
-              id="reset-chat-btn"
-              type="button"
-              onClick={(e) => {
-                e.preventDefault()
-                // Logic handled in onPointerDown for better responsiveness
-              }}
-              onPointerDown={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                console.log('Reset button pointer down')
-                if (showResetConfirm) {
-                  clearChat()
-                  setShowResetConfirm(false)
-                } else {
-                  setShowResetConfirm(true)
-                }
-              }}
-              className={`relative z-50 cursor-pointer select-none text-xs font-medium uppercase tracking-widest px-4 py-2 rounded-full transition-all flex items-center gap-2 shadow-sm border border-transparent ${showResetConfirm
-                ? 'bg-red-500 text-white hover:bg-red-600 animate-pulse border-red-400'
-                : 'text-text-muted hover:text-red-400 bg-surface-highlight/30 hover:bg-surface-highlight hover:border-surface-highlight'
-                }`}
-              title={showResetConfirm ? 'Click again to confirm' : (t('common.reset') || 'Reset conversation')}
-            >
-              <span className="material-symbols-outlined text-sm">{showResetConfirm ? 'check' : 'delete_sweep'}</span>
-              {showResetConfirm ? (t('common.confirm') || 'Confirm?') : (t('common.clear') || 'Clear')}
-            </button>
-          )}
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-20 py-4 sm:py-8 flex flex-col gap-4 sm:gap-8 scroll-smooth" id="chat-container">
+        {/* Sticky Status Bar */}
+        <div className="sticky top-0 z-[40] -mx-4 sm:-mx-6 lg:-mx-20 px-4 sm:px-6 lg:px-20 py-2 sm:py-3 bg-background-dark/80 backdrop-blur-md border-b border-white/5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${isPro ? 'bg-primary/20 border-primary/30 text-primary' : 'bg-surface-highlight/30 border-white/5 text-emerald-400'}`}>
+              <span className="material-symbols-outlined text-[16px]">{isPro ? 'stars' : 'bolt'}</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">{isPro ? 'Pro 5.2' : 'Mini'}</span>
+            </div>
+            <span className="hidden sm:inline text-[10px] font-bold text-text-muted uppercase tracking-wider">
+              {format(new Date(), 'EEEE, MMM do')}
+            </span>
+          </div>
 
-          {/* Hazem Pro/Mini Toggle - Only for Pro subscribers */}
-          {userProfile?.is_pro && (
-            <button
-              type="button"
-              onClick={() => setIsPro(!isPro)}
-              className={`relative z-50 flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] transition-all border ${isPro
-                ? 'bg-gradient-to-r from-primary to-emerald-500 text-surface-dark border-transparent shadow-[0_0_15px_rgba(19,236,91,0.4)] scale-105'
-                : 'bg-surface-highlight/20 text-text-muted border-white/5 hover:border-white/10'}`}
-            >
-              <span className={`material-symbols-outlined text-sm ${isPro ? 'animate-pulse' : ''}`}>
-                {isPro ? 'workspace_premium' : 'bolt'}
-              </span>
-              {isPro ? 'Hazem Pro (5.2)' : 'Hazem Mini'}
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Clear Chat Button */}
+            {messages.length > 1 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  if (showResetConfirm) {
+                    clearChat()
+                    setShowResetConfirm(false)
+                  } else {
+                    setShowResetConfirm(true)
+                  }
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all border ${showResetConfirm
+                  ? 'bg-red-500 text-white border-transparent animate-pulse'
+                  : 'bg-white/5 text-text-muted border-white/5 hover:border-red-500/50 hover:text-red-400'
+                  }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">{showResetConfirm ? 'done' : 'delete_sweep'}</span>
+                {showResetConfirm ? 'Sure?' : 'Clear'}
+              </button>
+            )}
+
+            {/* Mode Toggle (Pro Only) */}
+            {userProfile?.is_pro && (
+              <button
+                type="button"
+                onClick={() => setIsPro(!isPro)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all border ${isPro
+                  ? 'bg-primary/20 text-primary border-primary/30'
+                  : 'bg-white/5 text-text-muted border-white/5'
+                  }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">{isPro ? 'cached' : 'bolt'}</span>
+                {isPro ? 'Switch to Mini' : 'Switch to Pro'}
+              </button>
+            )}
+          </div>
         </div>
 
 
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`group flex items-start gap-4 max-w-3xl ${message.role === 'user' ? 'flex-row-reverse self-end' : ''}`}
+            className={`group flex items-start gap-2 sm:gap-4 max-w-3xl ${message.role === 'user' ? 'flex-row-reverse self-end' : ''}`}
           >
             {/* Avatar */}
-            <div className={`h-10 w-10 rounded-full shrink-0 flex items-center justify-center overflow-hidden border ${message.role === 'assistant' ? 'bg-surface-highlight border-primary/30 shadow-[0_0_10px_rgba(19,236,91,0.2)]' : 'bg-gradient-to-tr from-primary to-emerald-600 text-surface-dark font-bold text-xs shadow-md'}`}>
+            <div className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full shrink-0 flex items-center justify-center overflow-hidden border ${message.role === 'assistant' ? 'bg-surface-highlight border-primary/30 shadow-[0_0_10px_rgba(19,236,91,0.2)]' : 'bg-gradient-to-tr from-primary to-emerald-600 text-surface-dark font-bold text-[10px] sm:text-xs shadow-md'}`}>
               {message.role === 'assistant' ? (
-                <span className="material-symbols-outlined text-primary text-xl">smart_toy</span>
+                <span className="material-symbols-outlined text-primary text-lg sm:text-xl">smart_toy</span>
               ) : (
                 <span>ME</span>
               )}
@@ -406,9 +416,9 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
                 <span className="text-text-muted text-xs">{format(message.timestamp, 'h:mm a')}</span>
               </div>
               <div className="relative group/bubble">
-                <div className={`select-text p-4 rounded-2xl ${message.role === 'assistant' ? 'rounded-tl-none bg-surface-highlight text-white' : 'rounded-tr-none bg-primary text-surface-dark font-medium shadow-[0_4px_15px_-3px_rgba(19,236,91,0.3)]'} text-base leading-relaxed shadow-sm`}>
+                <div className={`select-text p-3 sm:p-4 rounded-2xl ${message.role === 'assistant' ? 'rounded-tl-none bg-surface-highlight text-white' : 'rounded-tr-none bg-primary text-surface-dark font-medium shadow-[0_4px_15px_-3px_rgba(19,236,91,0.3)]'} text-sm sm:text-base leading-relaxed shadow-sm`}>
                   {message.role === 'assistant' ? (
-                    <div className="prose prose-invert prose-sm max-w-none prose-p:my-1 prose-strong:text-primary">
+                    <div className="prose prose-invert prose-sm max-w-none prose-p:my-0.5 prose-strong:text-primary">
                       <ReactMarkdown>{message.content}</ReactMarkdown>
                     </div>
                   ) : (
@@ -452,26 +462,26 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
       </div>
 
       {/* Composer Area */}
-      <div className="px-4 pb-6 lg:px-40 pt-2 bg-gradient-to-t from-background-dark via-background-dark to-transparent z-10">
-        <div className="max-w-[960px] mx-auto flex flex-col gap-3">
+      <div className="px-2 pb-4 lg:px-40 pt-1 bg-gradient-to-t from-background-dark via-background-dark to-transparent z-10">
+        <div className="max-w-[960px] mx-auto flex flex-col gap-2">
           {userProfile?.is_pro && !isPro && (
-            <div className="flex items-center justify-between px-4 py-2 bg-primary/10 border border-primary/20 rounded-xl animate-[fadeIn_0.5s_ease-out]">
+            <div className="flex items-center justify-between px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-xl animate-[fadeIn_0.5s_ease-out]">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-sm animate-pulse">info</span>
-                <p className="text-[10px] text-primary font-bold uppercase tracking-wider">
-                  You're in Base mode. Switch to Pro for GPT-5.2 precision.
+                <span className="material-symbols-outlined text-primary text-xs">info</span>
+                <p className="text-[9px] text-primary font-bold uppercase tracking-wider">
+                  Base Mode Active. Switch to Pro?
                 </p>
               </div>
               <button
                 onClick={() => setIsPro(true)}
-                className="text-[10px] bg-primary text-surface-dark px-2 py-0.5 rounded font-black uppercase hover:scale-105 transition-transform"
+                className="text-[9px] bg-primary text-surface-dark px-2 py-0.5 rounded-lg font-black uppercase hover:scale-105 transition-transform"
               >
-                Switch Now
+                Switch
               </button>
             </div>
           )}
           {/* Input Bar */}
-          <form onSubmit={handleSubmit} className="relative flex items-center w-full bg-surface-highlight rounded-2xl border border-white/5 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50 transition-all shadow-xl min-h-[56px]">
+          <form onSubmit={handleSubmit} className="relative flex items-center w-full bg-surface-highlight/40 rounded-[20px] border border-white/5 focus-within:border-primary/40 transition-all shadow-xl min-h-[52px]">
             <input
               type="text"
               value={input}
@@ -487,18 +497,18 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
                 onClick={isRecording ? stopRecording : startRecording}
                 disabled={loading || isTranscribing}
                 className={`h-11 w-11 rounded-full flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 ${isRecording
-                    ? 'bg-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.5)]'
-                    : isTranscribing
-                      ? 'bg-amber-500'
-                      : 'bg-surface-dark/50 hover:bg-surface-dark border border-white/10'
+                  ? 'bg-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.5)]'
+                  : isTranscribing
+                    ? 'bg-amber-500'
+                    : 'bg-surface-dark/50 hover:bg-surface-dark border border-white/10'
                   }`}
               >
                 {isTranscribing ? (
-                  <span className="material-symbols-outlined text-xl text-white animate-spin">hourglass_empty</span>
+                  <span className="material-symbols-outlined text-lg sm:text-xl text-white animate-spin">hourglass_empty</span>
                 ) : isRecording ? (
-                  <span className="material-symbols-outlined text-xl text-white">stop</span>
+                  <span className="material-symbols-outlined text-lg sm:text-xl text-white">stop</span>
                 ) : (
-                  <span className="material-symbols-outlined text-xl text-primary">mic</span>
+                  <span className="material-symbols-outlined text-lg sm:text-xl text-primary">mic</span>
                 )}
               </button>
               {/* Send Button */}

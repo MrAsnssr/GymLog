@@ -55,12 +55,12 @@ serve(async (req) => {
             type: audioFile.type || 'audio/webm'
         })
 
-        // Call Whisper API
+        // Call Whisper API with a context-rich prompt to improve Arabic/Gym terminology recognition
         const transcription = await openai.audio.transcriptions.create({
             file: file,
             model: 'whisper-1',
-            language: 'ar', // Arabic - will also understand English mixed in
             response_format: 'text',
+            prompt: "هذا شخص يسجل بيانات التمارين الرياضية والأكل. المصطلحات تشمل: بنش برس، سكوات، رفرفة، بروتين، سعرات، دجاج، أرز. Gym logging: reps, sets, weight, protein, calories, chicken, rice.",
         })
 
         console.log(`[TRANSCRIBE] Result: "${transcription}"`)

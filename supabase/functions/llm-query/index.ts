@@ -54,7 +54,7 @@ serve(async (req) => {
     }
 
     // Get request body
-    const { query, user_id: providedUserId, history, userProfile, isPro } = await req.json()
+    const { query, user_id: providedUserId, history, userProfile, isPro, currentTime } = await req.json()
     if (!query) {
       return new Response(
         JSON.stringify({ error: 'Missing query' }),
@@ -79,7 +79,7 @@ serve(async (req) => {
     // Fetch user profile with personalization settings
     const { data: dbProfile } = await supabase
       .from('profiles')
-      .select('is_pro, weight_unit, ai_language, calorie_goal, protein_goal, carb_goal, fat_goal, custom_instructions')
+      .select('is_pro, weight_unit, ai_language, calorie_goal, protein_goal, carb_goal, fat_goal, custom_instructions, predict_nutrients')
       .eq('user_id', userId)
       .single()
 
@@ -96,6 +96,8 @@ serve(async (req) => {
       carbs: dbProfile?.carb_goal,
       fat: dbProfile?.fat_goal
     } : null
+
+    const predictNutrients = effectiveIsPro && (dbProfile?.predict_nutrients || false)
 
 
     // Define function schemas for OpenAI
@@ -130,14 +132,30 @@ serve(async (req) => {
           type: 'object',
           properties: {
             food_name: { type: 'string' },
-            meal_type: { type: 'string', enum: ['breakfast', 'lunch', 'dinner', 'snack'] },
+            meal_type: {
+              type: 'string',
+              enum: ['breakfast', 'lunch', 'dinner', 'snack'],
+              description: 'Pick intelligently based on current time AND food context provided in system prompt.'
+            },
             calories: { type: 'number' },
             protein_g: { type: 'number' },
             carbs_g: { type: 'number' },
             fat_g: { type: 'number' },
           },
-          required: ['food_name', 'meal_type'],
+          required: ['food_name'],
         },
+      },
+      {
+        name: 'update_ai_preferences',
+        description: 'Update user settings like language or weight unit.',
+        parameters: {
+          type: 'object',
+          properties: {
+            ai_language: { type: 'string', enum: ['ar', 'en', 'auto'] },
+            weight_unit: { type: 'string', enum: ['lbs', 'kg'] },
+            predict_nutrients: { type: 'boolean' }
+          }
+        }
       },
       {
         name: 'get_workout_history',
@@ -154,6 +172,19 @@ serve(async (req) => {
         description: 'Overall stats.',
         parameters: { type: 'object', properties: {} }
       },
+      {
+        name: 'log_body_measurement',
+        description: 'Record user weight or body fat. Use kg or lbs as provided.',
+        parameters: {
+          type: 'object',
+          properties: {
+            weight: { type: 'number' },
+            unit: { type: 'string', enum: ['kg', 'lbs'] },
+            body_fat_percent: { type: 'number' }
+          },
+          required: ['weight', 'unit']
+        }
+      }
     ]
 
     // Build user profile context string
@@ -200,30 +231,50 @@ Use this information to personalize your advice. For example:
     const systemMessage = {
       role: 'system',
       content: `${userProfileContext}${goalsContext}
-You are ${effectiveIsPro ? 'Hazem Pro' : 'Hazem'}, a fitness data assistant. Your job is simple: log data and retrieve data. No narcissism, no coaching, no enthusiasm. NEVER give advice.
+You are Hazem, a focused and helpful Omani gym assistant. You are here to help the user track their legacy and gains. Every set and every meal matters. You are precise but you have a "gym comrade" soul. Speak naturally in Omani Arabic. NEVER give health or medical advice.
+
+CURRENT LOCAL TIME: ${currentTime || new Date().toISOString()}
 
 ${effectiveIsPro ? 'As the Pro version, you use the advanced GPT-5.2 model for superior precision and complex multi-set logic.' : 'You are the base version using GPT-5 Mini for fast, efficient logging.'}
 
 ### LOGGING RULES:
-1. If user provides workout or food data, CALL THE TOOL immediately. Don't talk about it.
+1. If user provides normal workout or food data, CALL THE TOOL immediately. Don't talk about it.
+2. If data is RIDICULOUS (eating a giraffe, benching 1000kg, etc), DO NOT call the tool. Instead, ask the user if they are serious with a skeptical Omani vibe.
 2. Data requirements:
    - Weights/machines: Need weight + reps
    - Bodyweight (pushups, etc): weight_lbs=0, just reps
    - Cardio: weight_lbs=0, reps=minutes
+   - Food logging (Picking meal_type):
+     - Look at the FOOD and the TIME.
+     - 05:00 - 11:00: Usually Breakfast
+     - 11:00 - 16:00 (4 PM): Usually Lunch
+     - 16:00 - 05:00: Usually Dinner
+     - IMPORTANT: If user says they ate a "full chicken" or a heavy meal, it is NOT a snack. Even at 3 PM, "full chicken" is Lunch. Even at 6 PM, it is Dinner.
+     - Only use 'snack' for small items (fruit, chocolate, protein bar, coffee).
+     ${predictNutrients
+          ? 'If the user provides a food name but omits macros (calories, protein, etc), PREDICT/ESTIMATE them yourself based on common servings. DO NOT ASK the user for them.'
+          : 'If macros are missing, ask the user briefly: "كم سعرة؟"'
+        }
 3. Missing data? Just ask briefly: "كم؟" or "الوزن?"
 4. Save exercise names in English.
 5. Weight unit preference: ${weightUnit}
+### DATA VALIDATION & RIDICULOUSNESS CHECK:
+- If reps > 30 for heavy lifts (bench, squat, deadlift), ask to confirm.
+- If weight seems extreme (>500 lbs), ask to confirm.
+- RIDICULOUS INPUTS: If user says they ate a "giraffe", "elephant", or "truck", DO NOT LOG IT. Ask first: "زرافة عاد؟ متأكد؟".
 
-### DATA VALIDATION:
-- If reps > 30 for heavy lifts (bench, squat, deadlift), ask to confirm: "50 تكرار؟ تأكد"
-- If weight seems extreme (>500 lbs), ask to confirm
+### LANGUAGE & PREFERENCES:
+- PREFERENCE: ${aiLanguage} (ar=Arabic, en=English, auto=No preference/Mixed)
+- If language is 'auto', respond in the language the user used, or mix them naturally (Arabic with English terms).
+- USER CAN CHANGE SETTINGS: If user says "كلمني انجليزي" or "Switch to English", update the preference using 'update_ai_preferences' AND immediately switch your language.
+- Speak ${aiLanguage === 'en' ? 'English' : aiLanguage === 'ar' ? 'Omani Arabic' : 'Omani Arabic (mixed with English)'} naturally.
 
 ### RESPONSE STYLE:
-- Speak ${aiLanguage === 'en' ? 'English' : 'Arabic (Omani dialect is fine)'}
-- Be brief and direct
-- After logging: just confirm what was saved. Example: "تم: Bench Press, 135 ${weightUnit}, 3x10"
-- No motivational phrases. No "كفو", "وحش", "يا بطل", etc.
-- NEVER give advice or recommendations. Just data in, data out.${customInstructionsContext}`
+- Be brief, but you are not a machine. Acknowledge the hard work.
+- SKEPTICISM: If the input is weird or impossible, show it. "صدقك؟" or "تمزح؟".
+- After logging: confirm the data clearly.
+- No "coaching" (don't tell them how to lift), but you can be a "gym bro" (supportive talk is fine).
+- NEVER give medical advice.${customInstructionsContext}`
     }
 
     console.log('[DEBUG] Received history length:', history?.length)
@@ -245,250 +296,329 @@ ${effectiveIsPro ? 'As the Pro version, you use the advanced GPT-5.2 model for s
       chatMessages.push({ role: 'user', content: query })
     }
 
+    // Build tools from functions
+    const tools = functions.map(f => ({
+      type: 'function' as const,
+      function: f
+    }))
+
     // Call OpenAI
     const completion = await openai.chat.completions.create({
       model: effectiveIsPro ? 'gpt-5.2' : 'gpt-5-mini',
       messages: chatMessages,
-      functions,
-      function_call: 'auto',
+      tools,
+      tool_choice: 'auto',
     })
 
     const message = completion.choices[0].message
 
-    if (!message.function_call) {
+    if (!message.tool_calls || message.tool_calls.length === 0) {
       return new Response(
         JSON.stringify({
           response: message.content,
-          debug: { function_call: null }
+          debug: { tool_calls: null }
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Execute the function call
-    const functionName = message.function_call.name
-    const functionArgs = JSON.parse(message.function_call.arguments || '{}')
+    // Process all tool calls in parallel/batch
+    const results = []
+    for (const toolCall of message.tool_calls) {
+      const functionName = toolCall.function.name
+      const functionArgs = JSON.parse(toolCall.function.arguments || '{}')
 
-    console.log(`[DEBUG] Function called: ${functionName}`)
-    console.log(`[DEBUG] Arguments:`, JSON.stringify(functionArgs))
+      console.log(`[DEBUG] Tool called: ${functionName}`)
+      console.log(`[DEBUG] Arguments:`, JSON.stringify(functionArgs))
 
-    let result: any = {}
-    let responseText = ''
+      let result: any = {}
+      let responseText = ''
 
-    switch (functionName) {
-      case 'get_workout_history': {
-        const { data } = await supabase
-          .from('workout_sessions')
-          .select('*, workout_sets(*)')
-          .eq('user_id', userId)
-          .order('session_date', { ascending: false })
-          .limit(functionArgs.limit || 10)
+      switch (functionName) {
+        case 'get_workout_history': {
+          const { data } = await supabase
+            .from('workout_sessions')
+            .select('*, workout_sets(*)')
+            .eq('user_id', userId)
+            .order('session_date', { ascending: false })
+            .limit(functionArgs.limit || 10)
 
-        result = { workouts: data || [] }
-        responseText = `Found ${data?.length || 0} workouts.`
-        break
-      }
-
-
-      case 'get_food_logs': {
-        const { data } = await supabase
-          .from('food_logs')
-          .select('*')
-          .eq('user_id', userId)
-          .order('meal_date', { ascending: false })
-          .limit(20)
-
-        result = { food_logs: data || [] }
-        responseText = `Found ${data?.length || 0} food logs.`
-        break
-      }
-
-      case 'log_food': {
-        const { error } = await supabase
-          .from('food_logs')
-          .insert({
-            user_id: userId,
-            meal_date: new Date().toISOString().split('T')[0],
-            meal_type: functionArgs.meal_type || 'snack',
-            food_name: functionArgs.food_name,
-            calories: functionArgs.calories || 0,
-            protein_g: functionArgs.protein_g || 0,
-            carbs_g: functionArgs.carbs_g || 0,
-            fat_g: functionArgs.fat_g || 0
-          })
-
-        if (error) {
-          console.error('[ERROR] log_food failed:', error)
-          throw error
+          result = { workouts: data || [] }
+          responseText = `Found ${data?.length || 0} workouts.`
+          break
         }
 
-        result = { success: true, logged: functionArgs }
-        responseText = 'Food logged successfully.'
-        break
-      }
 
-      case 'log_workout_sets': {
-        console.log('[DEBUG] Executing log_workout_sets')
-        const { sets } = functionArgs as {
-          sets: Array<{
-            exercise_name: string,
-            weight_lbs: number,
-            reps: number
-          }>
-        }
-
-        if (!sets || !sets.length) {
-          result = { success: false, error: 'No sets provided' }
-          break;
-        }
-
-        // Get today's workout session
-        const today = new Date().toISOString().split('T')[0]
-
-        // Find existing session for today
-        let { data: sessionData, error: sessionFetchError } = await supabase
-          .from('workout_sessions')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('session_date', today)
-          .single()
-
-        if (sessionFetchError && sessionFetchError.code !== 'PGRST116') {
-          console.error('[ERROR] Failed to fetch session:', sessionFetchError)
-          throw sessionFetchError
-        }
-
-        let sessionId = sessionData?.id
-
-        // Create new session if none exists
-        if (!sessionId) {
-          try {
-            console.log('[DEBUG] Creating new workout session for today')
-            const { data: newSession, error: createError } = await supabase
-              .from('workout_sessions')
-              .insert({
-                user_id: userId,
-                session_date: today,
-              })
-              .select()
-              .single()
-
-            if (createError) throw createError
-            sessionId = newSession.id
-          } catch (sessionErr: any) {
-            console.error('[ERROR] Failed to create session:', sessionErr)
-            result = { success: false, error: `Session Critical Fail: ${sessionErr.message || JSON.stringify(sessionErr)}` }
-            break; // Stop execution
-          }
-        }
-
-        const loggedSets = []
-        const failedSets = []
-
-        // Loop through logged sets
-        for (const setItem of sets) {
-          const set = setItem as any
-          const numSets = set.num_sets || 1
-
-          // Create exercise if not exists
-          const { data: exercise, error: exerciseError } = await supabase
-            .from('exercises')
+        case 'get_food_logs': {
+          const { data } = await supabase
+            .from('food_logs')
             .select('*')
-            .ilike('name', set.exercise_name)
+            .eq('user_id', userId)
+            .order('meal_date', { ascending: false })
+            .limit(20)
+
+          result = { food_logs: data || [] }
+          responseText = `Found ${data?.length || 0} food logs.`
+          break
+        }
+
+        case 'log_food': {
+          const { error } = await supabase
+            .from('food_logs')
+            .insert({
+              user_id: userId,
+              meal_date: new Date().toISOString().split('T')[0],
+              meal_type: functionArgs.meal_type || 'snack',
+              food_name: functionArgs.food_name,
+              calories: functionArgs.calories || 0,
+              protein_g: functionArgs.protein_g || 0,
+              carbs_g: functionArgs.carbs_g || 0,
+              fat_g: functionArgs.fat_g || 0
+            })
+
+          if (error) {
+            console.error('[ERROR] log_food failed:', error)
+            throw error
+          }
+
+          result = { success: true, logged: functionArgs }
+          responseText = 'Food logged successfully.'
+          break
+        }
+
+        case 'log_workout_sets': {
+          console.log('[DEBUG] Executing log_workout_sets')
+          const { sets } = functionArgs as {
+            sets: Array<{
+              exercise_name: string,
+              weight_lbs: number,
+              reps: number
+            }>
+          }
+
+          if (!sets || !sets.length) {
+            result = { success: false, error: 'No sets provided' }
+            break;
+          }
+
+          // Get today's workout session
+          const today = new Date().toISOString().split('T')[0]
+
+          // Find existing session for today
+          let { data: sessionData, error: sessionFetchError } = await supabase
+            .from('workout_sessions')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('session_date', today)
             .single()
 
-          let exerciseId
-          if (exercise) {
-            exerciseId = exercise.id
-          } else {
-            // Create new exercise
-            const { data: newExercise } = await supabase
-              .from('exercises')
-              .insert({
-                name: set.exercise_name,
-                category: 'other'
-              })
-              .select()
-              .single()
-            exerciseId = newExercise.id
+          if (sessionFetchError && sessionFetchError.code !== 'PGRST116') {
+            console.error('[ERROR] Failed to fetch session:', sessionFetchError)
+            throw sessionFetchError
           }
 
-          // Expand sets based on num_sets
-          let setSuccessCount = 0
-          for (let i = 0; i < numSets; i++) {
-            const { error: setError } = await supabase
-              .from('workout_sets')
-              .insert({
-                session_id: sessionId,
-                exercise_id: exerciseId,
-                user_id: undefined, // Explicitly undefined to avoid schema mismatch
-                set_number: i + 1, // Correct set number sequence 
-                weight_lbs: set.weight_lbs,
-                reps: set.reps,
-              })
+          let sessionId = sessionData?.id
 
-            if (setError) {
-              console.error('Error logging set:', setError)
-              // Don't break, try to log others
-              failedSets.push({ set, error: setError.message, set_number: i + 1 })
-            } else {
-              setSuccessCount++
+          // Create new session if none exists
+          if (!sessionId) {
+            try {
+              console.log('[DEBUG] Creating new workout session for today')
+              const { data: newSession, error: createError } = await supabase
+                .from('workout_sessions')
+                .insert({
+                  user_id: userId,
+                  session_date: today,
+                })
+                .select()
+                .single()
+
+              if (createError) throw createError
+              sessionId = newSession.id
+            } catch (sessionErr: any) {
+              console.error('[ERROR] Failed to create session:', sessionErr)
+              result = { success: false, error: `Session Critical Fail: ${sessionErr.message || JSON.stringify(sessionErr)}` }
+              break; // Stop execution
             }
           }
 
-          if (setSuccessCount > 0) {
-            loggedSets.push(`${set.exercise_name} (${setSuccessCount}/${numSets} sets)`)
+          const loggedSets = []
+          const failedSets = []
+
+          // Loop through logged sets
+          for (const setItem of sets) {
+            const set = setItem as any
+            const numSets = set.num_sets || 1
+
+            // Create exercise if not exists
+            const { data: exercise, error: exerciseError } = await supabase
+              .from('exercises')
+              .select('*')
+              .ilike('name', set.exercise_name)
+              .single()
+
+            let exerciseId
+            if (exercise) {
+              exerciseId = exercise.id
+            } else {
+              // Create new exercise
+              const { data: newExercise } = await supabase
+                .from('exercises')
+                .insert({
+                  name: set.exercise_name,
+                  category: 'other'
+                })
+                .select()
+                .single()
+              exerciseId = newExercise.id
+            }
+
+            // Expand sets based on num_sets
+            let setSuccessCount = 0
+            for (let i = 0; i < numSets; i++) {
+              const { error: setError } = await supabase
+                .from('workout_sets')
+                .insert({
+                  session_id: sessionId,
+                  exercise_id: exerciseId,
+                  user_id: undefined, // Explicitly undefined to avoid schema mismatch
+                  set_number: i + 1, // Correct set number sequence 
+                  weight_lbs: set.weight_lbs,
+                  reps: set.reps,
+                })
+
+              if (setError) {
+                console.error('Error logging set:', setError)
+                // Don't break, try to log others
+                failedSets.push({ set, error: setError.message, set_number: i + 1 })
+              } else {
+                setSuccessCount++
+              }
+            }
+
+            if (setSuccessCount > 0) {
+              // Fetch history context for this exercise (Pro Only)
+              let historyContext = null
+              if (effectiveIsPro) {
+                const { data: lastSessions } = await supabase
+                  .from('workout_sets')
+                  .select('weight_lbs, reps, workout_sessions!inner(session_date)')
+                  .eq('exercise_id', exerciseId)
+                  .lt('workout_sessions.session_date', today)
+                  .order('created_at', { ascending: false })
+                  .limit(10)
+
+                if (lastSessions && lastSessions.length > 0) {
+                  historyContext = lastSessions.map((s: any) => ({
+                    date: s.workout_sessions.session_date,
+                    weight: s.weight_lbs,
+                    reps: s.reps
+                  }))
+                }
+              }
+
+              loggedSets.push({
+                name: set.exercise_name,
+                sets_count: setSuccessCount,
+                planned_sets: numSets,
+                weight: set.weight_lbs,
+                reps: set.reps,
+                history: historyContext
+              })
+            }
           }
+
+          result = {
+            success: loggedSets.length > 0,
+            logged: loggedSets,
+            failed: failedSets
+          }
+          responseText = `Logged ${loggedSets.length} sets. Failed: ${failedSets.length}.`
+          break
         }
 
-        result = {
-          success: loggedSets.length > 0,
-          logged: loggedSets,
-          failed: failedSets
+        case 'get_statistics': {
+          const period = functionArgs.period || 'week'
+          let startDate = new Date()
+          if (period === 'week') startDate.setDate(startDate.getDate() - 7)
+          else if (period === 'month') startDate.setMonth(startDate.getMonth() - 1)
+
+          const { count: workoutCount } = await supabase
+            .from('workout_sessions')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId)
+            .gte('session_date', startDate.toISOString())
+
+          const { data: measurements } = await supabase
+            .from('body_measurements')
+            .select('weight_lbs, measurement_date')
+            .eq('user_id', userId)
+            .order('measurement_date', { ascending: false })
+            .limit(7)
+
+          result = { total_workouts: workoutCount || 0, measurements }
+          responseText = `${workoutCount} workouts this ${period}.`
+          break
         }
-        responseText = `Logged ${loggedSets.length} sets. Failed: ${failedSets.length}.`
-        break
+
+        case 'log_body_measurement': {
+          const { weight, unit, body_fat_percent } = functionArgs
+          const weight_kg = unit === 'kg' ? weight : (weight / 2.20462)
+          const weight_lbs = unit === 'lbs' ? weight : (weight * 2.20462)
+
+          // Update profile for quick access
+          await supabase
+            .from('profiles')
+            .update({ weight_kg })
+            .eq('user_id', userId)
+
+          // Log in history
+          const { error } = await supabase
+            .from('body_measurements')
+            .insert({
+              user_id: userId,
+              weight_lbs,
+              body_fat_percent,
+              measurement_date: new Date().toISOString()
+            })
+
+          if (error) throw error
+
+          result = { success: true, logged: { weight, unit, body_fat_percent } }
+          responseText = `Recorded weight: ${weight}${unit}.`
+          break
+        }
+
+        default:
+          responseText = 'Action not supported yet.'
       }
 
-      case 'get_statistics': {
-        const period = functionArgs.period || 'week'
-        let startDate = new Date()
-        if (period === 'week') startDate.setDate(startDate.getDate() - 7)
-        else if (period === 'month') startDate.setMonth(startDate.getMonth() - 1)
-
-        const { count: workoutCount } = await supabase
-          .from('workout_sessions')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', userId)
-          .gte('session_date', startDate.toISOString())
-
-        const { data: measurements } = await supabase
-          .from('body_measurements')
-          .select('weight_lbs, measurement_date')
-          .eq('user_id', userId)
-          .order('measurement_date', { ascending: false })
-          .limit(7)
-
-        result = { total_workouts: workoutCount || 0, measurements }
-        responseText = `${workoutCount} workouts this ${period}.`
-        break
-      }
-
-      default:
-        responseText = 'Action not supported yet.'
+      results.push({
+        tool_call_id: toolCall.id,
+        function_name: functionName,
+        result
+      })
     }
 
-    // Get final response - STRICT VALIDATION
+    // Final consolidated response
+    const systemPromptLang = aiLanguage === 'ar'
+      ? 'Speak ONLY in Omani Arabic.'
+      : aiLanguage === 'en'
+        ? 'Speak ONLY in English.'
+        : 'Respond in the language the user used, or mix Arabic/English naturally (Gym slang).'
+
     const finalCompletion = await openai.chat.completions.create({
       model: effectiveIsPro ? 'gpt-5.2' : 'gpt-5-mini',
       messages: [
         {
-          role: 'system', content: `You are a data assistant. Be brief.
-- IF success=true: Just confirm what was saved. Example: "تم: [Exercise], [weight], [sets]x[reps]"
-- IF success=false: Say "ما تسجل" (didn't save)
-- No motivation. No enthusiasm. Just facts.
-- Speak Arabic.` },
-        { role: 'user', content: `User query: "${query}". Data: ${JSON.stringify(result)}. Respond naturally based on the data.` },
+          role: 'system', content: `You are Hazem, an Omani gym comrade. 
+Confirm successful logs naturally.
+- Be supportive. If Arabic: "تم يالشيخ", "سجلت لك الحين", "كفو عليك". If English: "Done chief", "Logged it", "Keep it up".
+- IF PRO: Compare current logs to history if provided. Notice the progress!
+- If a log failed: explain why briefly.
+- Maintain your "calm gym bro" soul.
+- ${systemPromptLang}`
+        },
+        { role: 'user', content: `User query: "${query}". Batch Results: ${JSON.stringify(results)}. Respond naturally to the user.` },
       ],
     })
 
@@ -519,9 +649,9 @@ ${effectiveIsPro ? 'As the Pro version, you use the advanced GPT-5.2 model for s
     return new Response(
       JSON.stringify({
         response: finalCompletion.choices[0].message.content,
-        data: result,
+        data: results,
         debug: {
-          function_call: message.function_call
+          tool_calls: message.tool_calls
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

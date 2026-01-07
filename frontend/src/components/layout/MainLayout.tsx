@@ -31,7 +31,7 @@ export function MainLayout({ children, title, showAssistantStatus = true, action
                     {/* Logo */}
                     <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                         <span className="material-symbols-outlined text-primary text-2xl font-bold">bolt</span>
-                        <h1 className="text-white text-xl font-bold tracking-tight font-display">MUSCLE LOG</h1>
+                        <h1 className="hidden sm:block text-white text-xl font-bold tracking-tight font-display">MUSCLE LOG</h1>
                     </Link>
 
                     {showAssistantStatus && (
@@ -51,14 +51,14 @@ export function MainLayout({ children, title, showAssistantStatus = true, action
                     )}
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1 sm:gap-3">
                     {/* Language Toggle */}
                     <button
                         onClick={toggleLanguage}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-highlight/40 border border-surface-highlight hover:border-primary/50 text-white transition-all text-sm font-bold shadow-sm"
+                        className="flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg bg-surface-highlight/40 border border-surface-highlight hover:border-primary/50 text-white transition-all text-sm font-bold shadow-sm"
                     >
                         <span className="text-lg leading-none">{i18n.language.startsWith('ar') ? '🇺🇸' : '🇴🇲'}</span>
-                        <span className="hidden sm:inline">{i18n.language.startsWith('ar') ? 'English' : 'العربية'}</span>
+                        <span className="hidden md:inline">{i18n.language.startsWith('ar') ? 'English' : 'العربية'}</span>
                     </button>
 
                     {user?.email === 'asnssrr@gmail.com' && (
@@ -82,7 +82,7 @@ export function MainLayout({ children, title, showAssistantStatus = true, action
 
                     {/* User Avatar & Logout */}
                     <div className="flex items-center gap-2">
-                        <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-primary to-emerald-600 flex items-center justify-center text-surface-dark font-bold text-xs uppercase shadow-sm">
+                        <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-gradient-to-tr from-primary to-emerald-600 flex items-center justify-center text-surface-dark font-bold text-xs uppercase shadow-sm">
                             {user?.email?.[0].toUpperCase()}
                         </div>
                         <button
@@ -103,8 +103,45 @@ export function MainLayout({ children, title, showAssistantStatus = true, action
             </header>
 
             {/* Content Body */}
-            <main className="flex-1 overflow-hidden relative bg-background-dark/95">
-                {children}
+            <main className="flex-1 overflow-hidden relative bg-background-dark/95 flex flex-col">
+                <div className="flex-1 overflow-hidden relative">
+                    {children}
+                </div>
+
+                {/* Bottom Navigation */}
+                <nav className="h-20 min-h-[80px] bg-surface-dark border-t border-surface-highlight/50 flex items-center justify-around px-2 z-10 safe-bottom">
+                    <Link
+                        to="/dashboard"
+                        className={`flex flex-col items-center gap-1 min-w-[64px] transition-all ${window.location.pathname === '/dashboard' ? 'text-primary' : 'text-text-muted hover:text-white'}`}
+                    >
+                        <span className={`material-symbols-outlined text-[24px] ${window.location.pathname === '/dashboard' ? 'fill-1 shadow-[0_0_10px_rgba(19,236,91,0.5)]' : ''}`}>chat_bubble</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider">{t('common.assistant', 'Assistant')}</span>
+                    </Link>
+
+                    <Link
+                        to="/workouts"
+                        className={`flex flex-col items-center gap-1 min-w-[64px] transition-all ${window.location.pathname === '/workouts' ? 'text-primary' : 'text-text-muted hover:text-white'}`}
+                    >
+                        <span className={`material-symbols-outlined text-[24px] ${window.location.pathname === '/workouts' ? 'fill-1' : ''}`}>history</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider">{t('common.history', 'History')}</span>
+                    </Link>
+
+                    <Link
+                        to="/food"
+                        className={`flex flex-col items-center gap-1 min-w-[64px] transition-all ${window.location.pathname === '/food' ? 'text-primary' : 'text-text-muted hover:text-white'}`}
+                    >
+                        <span className={`material-symbols-outlined text-[24px] ${window.location.pathname === '/food' ? 'fill-1' : ''}`}>restaurant</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider">{t('common.nutrition', 'Food')}</span>
+                    </Link>
+
+                    <Link
+                        to="/stats"
+                        className={`flex flex-col items-center gap-1 min-w-[64px] transition-all ${window.location.pathname === '/stats' ? 'text-primary' : 'text-text-muted hover:text-white'}`}
+                    >
+                        <span className={`material-symbols-outlined text-[24px] ${window.location.pathname === '/stats' ? 'fill-1' : ''}`}>monitoring</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider">{t('common.stats', 'Stats')}</span>
+                    </Link>
+                </nav>
             </main>
         </div>
     )

@@ -12,7 +12,9 @@ export function WorkoutHistory() {
   const { t } = useTranslation()
   const [sessions, setSessions] = useState<WorkoutSession[]>([])
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isPro, setIsPro] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -25,6 +27,15 @@ export function WorkoutHistory() {
 
     setLoading(true)
     try {
+      // Load Pro status
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_pro')
+        .eq('user_id', user.id)
+        .single()
+
+      setIsPro(profile?.is_pro || false)
+
       const { data, error: fetchError } = await supabase
         .from('workout_sessions')
         .select('*')
@@ -41,10 +52,45 @@ export function WorkoutHistory() {
     }
   }
 
+  const handleExport = async () => {
+    if (!user || !isPro) return
+    setExporting(true)
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-data`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ type: 'workouts', format: 'csv' }),
+        }
+      )
+
+      if (!response.ok) throw new Error('Export failed')
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `workouts_export_${new Date().toISOString().split('T')[0]}.csv`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      alert('Export failed: ' + err.message)
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!confirm(t('common.confirm_delete' || 'Are you sure?'))) return
+    if (!confirm(t('common.confirm_delete', 'Are you sure?'))) return
 
     try {
       const { error } = await supabase
@@ -75,13 +121,25 @@ export function WorkoutHistory() {
       title={t('common.sessions')}
       showAssistantStatus={false}
       actions={
-        <Link
-          to="/workouts/new"
-          className="bg-primary hover:bg-primary/90 text-surface-dark px-4 py-2 rounded-xl font-bold transition-all shadow-lg flex items-center gap-2"
-        >
-          <span className="material-symbols-outlined text-lg">add</span>
-          <span>{t('common.new_session' || 'New Session')}</span>
-        </Link>
+        <div className="flex gap-2">
+          {isPro && (
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="bg-surface-highlight hover:bg-surface-highlight/80 text-white px-4 py-2 rounded-xl font-bold transition-all border border-white/5 flex items-center gap-2 disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-lg">{exporting ? 'sync' : 'download'}</span>
+              <span className="hidden sm:inline">Export</span>
+            </button>
+          )}
+          <Link
+            to="/workouts/new"
+            className="bg-primary hover:bg-primary/90 text-surface-dark px-4 py-2 rounded-xl font-bold transition-all shadow-lg flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined text-lg">add</span>
+            <span>{t('common.new_session', 'New Session')}</span>
+          </Link>
+        </div>
       }
     >
       <div className="h-full overflow-y-auto px-6 lg:px-20 py-8 scroll-smooth">
@@ -98,13 +156,13 @@ export function WorkoutHistory() {
               <div className="h-20 w-20 bg-surface-highlight/30 rounded-full flex items-center justify-center mx-auto mb-6 text-primary">
                 <span className="material-symbols-outlined text-4xl">history</span>
               </div>
-              <h3 className="text-white text-xl font-bold mb-2">{t('sessions.empty_title' || 'No sessions yet')}</h3>
-              <p className="text-text-muted mb-8">{t('sessions.empty_desc' || 'Your fitness journey starts here.')}</p>
+              <h3 className="text-white text-xl font-bold mb-2">{t('sessions.empty_title', 'No sessions yet')}</h3>
+              <p className="text-text-muted mb-8">{t('sessions.empty_desc', 'Your fitness journey starts here.')}</p>
               <Link
                 to="/workouts/new"
                 className="inline-flex items-center gap-2 text-primary font-bold hover:underline"
               >
-                {t('sessions.start_first' || 'Start your first workout')}
+                {t('sessions.start_first', 'Start your first workout')}
                 <span className="material-symbols-outlined">arrow_forward</span>
               </Link>
             </div>
@@ -132,7 +190,7 @@ export function WorkoutHistory() {
                             <span>{session.duration_minutes}m</span>
                           </div>
                         )}
-                        <span className="text-xs text-text-muted">{session.notes ? session.notes : (t('sessions.no_notes' || 'No notes'))}</span>
+                        <span className="text-xs text-text-muted">{session.notes ? session.notes : (t('sessions.no_notes', 'No notes'))}</span>
                       </div>
                     </div>
                   </div>

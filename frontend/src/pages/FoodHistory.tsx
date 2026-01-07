@@ -12,7 +12,9 @@ export function FoodHistory() {
   const { t } = useTranslation()
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([])
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isPro, setIsPro] = useState(false)
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0])
   const [showAddForm, setShowAddForm] = useState(false)
 
@@ -27,6 +29,15 @@ export function FoodHistory() {
 
     setLoading(true)
     try {
+      // Load Pro status
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_pro')
+        .eq('user_id', user.id)
+        .single()
+
+      setIsPro(profile?.is_pro || false)
+
       const startOfDay = new Date(dateFilter)
       startOfDay.setHours(0, 0, 0, 0)
       const endOfDay = new Date(dateFilter)
@@ -49,8 +60,43 @@ export function FoodHistory() {
     }
   }
 
+  const handleExport = async () => {
+    if (!user || !isPro) return
+    setExporting(true)
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-data`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ type: 'food', format: 'csv' }),
+        }
+      )
+
+      if (!response.ok) throw new Error('Export failed')
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `food_export_${new Date().toISOString().split('T')[0]}.csv`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      alert('Export failed: ' + err.message)
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const handleDelete = async (id: string) => {
-    if (!confirm(t('common.confirm_delete' || 'Are you sure?'))) return
+    if (!confirm(t('common.confirm_delete', 'Are you sure?'))) return
 
     try {
       const { error } = await supabase
@@ -80,10 +126,10 @@ export function FoodHistory() {
   }, {} as Record<string, FoodLog[]>)
 
   const mealTypeLabels: Record<string, string> = {
-    breakfast: t('food.breakfast' || 'Breakfast'),
-    lunch: t('food.lunch' || 'Lunch'),
-    dinner: t('food.dinner' || 'Dinner'),
-    snack: t('food.snacks' || 'Snacks'),
+    breakfast: t('food.breakfast', 'Breakfast'),
+    lunch: t('food.lunch', 'Lunch'),
+    dinner: t('food.dinner', 'Dinner'),
+    snack: t('food.snacks', 'Snacks'),
   }
 
   if (loading) {
@@ -102,13 +148,25 @@ export function FoodHistory() {
       title={t('common.nutrition')}
       showAssistantStatus={false}
       actions={
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="bg-primary hover:bg-primary/90 text-surface-dark px-4 py-2 rounded-xl font-bold transition-all shadow-lg flex items-center gap-2"
-        >
-          <span className="material-symbols-outlined text-lg">{showAddForm ? 'close' : 'add'}</span>
-          <span>{showAddForm ? t('common.cancel') : t('common.log_food' || 'Log Food')}</span>
-        </button>
+        <div className="flex gap-2">
+          {isPro && (
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="bg-surface-highlight hover:bg-surface-highlight/80 text-white px-4 py-2 rounded-xl font-bold transition-all border border-white/5 flex items-center gap-2 disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-lg">{exporting ? 'sync' : 'download'}</span>
+              <span className="hidden sm:inline">Export</span>
+            </button>
+          )}
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="bg-primary hover:bg-primary/90 text-surface-dark px-4 py-2 rounded-xl font-bold transition-all shadow-lg flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined text-lg">{showAddForm ? 'close' : 'add'}</span>
+            <span>{showAddForm ? t('common.cancel') : t('common.log_food', 'Log Food')}</span>
+          </button>
+        </div>
       }
     >
       <div className="h-full overflow-y-auto px-6 lg:px-20 py-8 scroll-smooth">
@@ -116,7 +174,7 @@ export function FoodHistory() {
           {/* Date Picker Section */}
           <div className="flex items-center justify-between mb-8 pb-8 border-b border-surface-highlight">
             <div className="flex flex-col gap-1">
-              <h3 className="text-white text-xl font-bold">{t('food.daily_logs' || 'Daily Logs')}</h3>
+              <h3 className="text-white text-xl font-bold">{t('food.daily_logs', 'Daily Logs')}</h3>
               <p className="text-text-muted text-sm">{format(parseISO(dateFilter), 'EEEE, MMMM do')}</p>
             </div>
             <div className="relative">
@@ -151,13 +209,13 @@ export function FoodHistory() {
               <div className="h-20 w-20 bg-surface-highlight/30 rounded-full flex items-center justify-center mx-auto mb-6 text-primary">
                 <span className="material-symbols-outlined text-4xl">restaurant_menu</span>
               </div>
-              <h3 className="text-white text-xl font-bold mb-2">{t('food.empty_title' || 'No logs for this day')}</h3>
-              <p className="text-text-muted mb-8">{t('food.empty_desc' || 'Start tracking your nutrition to hit your goals.')}</p>
+              <h3 className="text-white text-xl font-bold mb-2">{t('food.empty_title', 'No logs for this day')}</h3>
+              <p className="text-text-muted mb-8">{t('food.empty_desc', 'Start tracking your nutrition to hit your goals.')}</p>
               <button
                 onClick={() => setShowAddForm(true)}
                 className="inline-flex items-center gap-2 text-primary font-bold hover:underline"
               >
-                {t('food.log_first' || 'Log your first meal')}
+                {t('food.log_first', 'Log your first meal')}
                 <span className="material-symbols-outlined">add_circle</span>
               </button>
             </div>
