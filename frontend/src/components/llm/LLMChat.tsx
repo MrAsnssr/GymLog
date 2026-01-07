@@ -66,6 +66,10 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
   const [loading, setLoading] = useState(false)
   const [isPro, setIsPro] = useState(false)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [isRecording, setIsRecording] = useState(false)
+  const [isTranscribing, setIsTranscribing] = useState(false)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -227,6 +231,86 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
       return () => clearTimeout(timer)
     }
   }, [showResetConfirm])
+
+  // Voice recording functions
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+      }
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        stream.getTracks().forEach(track => track.stop())
+        await transcribeAndSend(audioBlob)
+      }
+
+      mediaRecorder.start()
+      setIsRecording(true)
+    } catch (err) {
+      console.error('Failed to start recording:', err)
+      alert('Microphone access denied')
+    }
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop()
+      setIsRecording(false)
+    }
+  }
+
+  const transcribeAndSend = async (audioBlob: Blob) => {
+    setIsTranscribing(true)
+    try {
+      // Send audio to transcribe function
+      const formData = new FormData()
+      formData.append('audio', audioBlob, 'recording.webm')
+
+      const transcribeRes = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/transcribe`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`,
+          },
+          body: formData,
+        }
+      )
+
+      const transcribeData = await transcribeRes.json()
+
+      if (transcribeData.error) {
+        throw new Error(transcribeData.error)
+      }
+
+      const transcribedText = transcribeData.text
+      if (transcribedText && transcribedText.trim()) {
+        // Set the input and trigger submit
+        setInput(transcribedText)
+        // Auto-submit after a brief delay to show the text
+        setTimeout(() => {
+          const form = document.querySelector('form')
+          if (form) {
+            form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+          }
+        }, 300)
+      }
+    } catch (err) {
+      console.error('Transcription failed:', err)
+      alert('Voice transcription failed')
+    } finally {
+      setIsTranscribing(false)
+    }
+  }
+
 
   return (
     <div className="flex flex-col h-full relative">
@@ -392,12 +476,33 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={t('common.type_workout_details')}
+              placeholder={isTranscribing ? 'Transcribing...' : (isRecording ? 'Recording...' : t('common.type_workout_details'))}
               className="flex-1 bg-transparent py-4 px-6 text-white placeholder-text-muted focus:outline-none text-base"
-              disabled={loading}
+              disabled={loading || isRecording || isTranscribing}
             />
             <div className="flex items-center gap-2 pe-3 ps-1">
-              <button type="submit" disabled={loading || !input.trim()} className="h-11 w-11 sm:w-auto sm:px-6 rounded-full sm:rounded-xl bg-primary hover:bg-primary/90 text-surface-dark font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(19,236,91,0.2)] active:scale-95">
+              {/* Mic Button */}
+              <button
+                type="button"
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={loading || isTranscribing}
+                className={`h-11 w-11 rounded-full flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 ${isRecording
+                    ? 'bg-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.5)]'
+                    : isTranscribing
+                      ? 'bg-amber-500'
+                      : 'bg-surface-dark/50 hover:bg-surface-dark border border-white/10'
+                  }`}
+              >
+                {isTranscribing ? (
+                  <span className="material-symbols-outlined text-xl text-white animate-spin">hourglass_empty</span>
+                ) : isRecording ? (
+                  <span className="material-symbols-outlined text-xl text-white">stop</span>
+                ) : (
+                  <span className="material-symbols-outlined text-xl text-primary">mic</span>
+                )}
+              </button>
+              {/* Send Button */}
+              <button type="submit" disabled={loading || !input.trim() || isRecording || isTranscribing} className="h-11 w-11 sm:w-auto sm:px-6 rounded-full sm:rounded-xl bg-primary hover:bg-primary/90 text-surface-dark font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(19,236,91,0.2)] active:scale-95">
                 <span className="hidden sm:inline">{t('common.send')}</span>
                 <span className="material-symbols-outlined text-xl rtl:rotate-180">send</span>
               </button>
