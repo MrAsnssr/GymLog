@@ -35,7 +35,7 @@ export function MainLayout({ children, title, showAssistantStatus = true, action
                     </Link>
 
                     {showAssistantStatus && (
-                        <div className="hidden sm:flex items-center gap-2 ml-4 pl-4 border-l border-surface-highlight">
+                        <div className="hidden sm:flex items-center gap-2 ms-4 ps-4 border-is border-surface-highlight">
                             <span className="relative flex h-2.5 w-2.5">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
@@ -45,7 +45,7 @@ export function MainLayout({ children, title, showAssistantStatus = true, action
                     )}
 
                     {!showAssistantStatus && title && (
-                        <div className="hidden sm:flex items-center gap-2 ml-4 pl-4 border-l border-surface-highlight">
+                        <div className="hidden sm:flex items-center gap-2 ms-4 ps-4 border-is border-surface-highlight">
                             <span className="text-white text-sm font-bold">{title}</span>
                         </div>
                     )}
@@ -95,7 +95,7 @@ export function MainLayout({ children, title, showAssistantStatus = true, action
                     </div>
 
                     {actions && (
-                        <div className="flex items-center gap-2 ml-2 pl-2 border-l border-surface-highlight">
+                        <div className="flex items-center gap-2 ms-2 ps-2 border-is border-surface-highlight">
                             {actions}
                         </div>
                     )}

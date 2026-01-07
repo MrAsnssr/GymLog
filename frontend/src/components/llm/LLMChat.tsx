@@ -33,7 +33,7 @@ interface LLMChatProps {
 
 export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton = true }, ref) => {
   const { session, user } = useAuth()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { addLog } = useAiDebug()
   const navigate = useNavigate()
 
@@ -139,14 +139,13 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
     loadProfile()
   }, [user])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim() || loading || !session) return
+  const handleSend = async (content: string) => {
+    if (!content.trim() || loading || !session) return
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: input,
+      content: content,
       timestamp: new Date(),
     }
 
@@ -161,7 +160,7 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
         content: m.content
       }))
 
-      addLog('request', 'LLMChat', { query: input, history }) // Log Request
+      addLog('request', 'LLMChat', { query: content, history })
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/llm-query`,
@@ -173,11 +172,12 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
             'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({
-            query: input,
+            query: content,
             history,
             userProfile: userProfile,
             isPro: isPro,
-            currentTime: new Date().toISOString()
+            currentTime: new Date().toISOString(),
+            currentLanguage: i18n.language // Pass current UI language
           }),
         }
       )
@@ -185,7 +185,7 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
       if (!response.ok) throw new Error('Failed to fetch response')
 
       const data = await response.json()
-      addLog('response', 'LLMChat', data) // Log Response
+      addLog('response', 'LLMChat', data)
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -196,7 +196,7 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
 
       setMessages((prev) => [...prev, assistantMessage])
     } catch (error: any) {
-      addLog('error', 'LLMChat', { message: error.message }) // Log Error
+      addLog('error', 'LLMChat', { message: error.message })
       console.error('Error calling LLM:', error)
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -208,6 +208,11 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    handleSend(input)
   }
 
   const clearChat = () => {
@@ -295,15 +300,7 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
 
       const transcribedText = transcribeData.text
       if (transcribedText && transcribedText.trim()) {
-        // Set the input and trigger submit
-        setInput(transcribedText)
-        // Auto-submit after a brief delay to show the text
-        setTimeout(() => {
-          const form = document.querySelector('form')
-          if (form) {
-            form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
-          }
-        }, 300)
+        await handleSend(transcribedText)
       }
     } catch (err) {
       console.error('Transcription failed:', err)
@@ -339,9 +336,9 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
       )}
 
       {/* Chat Stream */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-20 py-4 sm:py-8 flex flex-col gap-4 sm:gap-8 scroll-smooth" id="chat-container">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-20 py-4 sm:py-6 flex flex-col gap-4 sm:gap-6 lg:gap-8 scroll-smooth" id="chat-container">
         {/* Sticky Status Bar */}
-        <div className="sticky top-0 z-[40] -mx-4 sm:-mx-6 lg:-mx-20 px-4 sm:px-6 lg:px-20 py-2 sm:py-3 bg-background-dark/80 backdrop-blur-md border-b border-white/5 flex items-center justify-between">
+        <div className="sticky top-0 z-[40] -mx-4 sm:-mx-6 lg:-mx-20 px-4 sm:px-6 lg:px-20 py-2 sm:py-3 bg-surface-dark border-b border-white/5 flex items-center justify-between shadow-lg">
           <div className="flex items-center gap-2">
             <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${isPro ? 'bg-primary/20 border-primary/30 text-primary' : 'bg-surface-highlight/30 border-white/5 text-emerald-400'}`}>
               <span className="material-symbols-outlined text-[16px]">{isPro ? 'stars' : 'bolt'}</span>

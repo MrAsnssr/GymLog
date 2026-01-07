@@ -54,7 +54,7 @@ serve(async (req) => {
     }
 
     // Get request body
-    const { query, user_id: providedUserId, history, userProfile, isPro, currentTime } = await req.json()
+    const { query, user_id: providedUserId, history, userProfile, isPro, currentTime, currentLanguage } = await req.json()
     if (!query) {
       return new Response(
         JSON.stringify({ error: 'Missing query' }),
@@ -88,7 +88,8 @@ serve(async (req) => {
 
     // Get personalization settings
     const weightUnit = dbProfile?.weight_unit || 'lbs'
-    const aiLanguage = dbProfile?.ai_language || 'ar'
+    // Prioritize currentLanguage from UI if provided, then profile, then default
+    const aiLanguage = (currentLanguage?.startsWith('ar') ? 'ar' : currentLanguage?.startsWith('en') ? 'en' : null) || dbProfile?.ai_language || 'ar'
     const customInstructions = effectiveIsPro ? (dbProfile?.custom_instructions || '') : ''
     const goals = effectiveIsPro ? {
       calories: dbProfile?.calorie_goal,
