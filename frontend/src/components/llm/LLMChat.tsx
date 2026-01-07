@@ -337,58 +337,6 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
 
       {/* Chat Stream */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-20 py-4 sm:py-6 flex flex-col gap-4 sm:gap-6 lg:gap-8 scroll-smooth" id="chat-container">
-        {/* Sticky Status Bar */}
-        <div className="sticky top-0 z-[40] -mx-4 sm:-mx-6 lg:-mx-20 px-4 sm:px-6 lg:px-20 py-2 sm:py-3 bg-surface-dark border-b border-white/5 flex items-center justify-between shadow-lg">
-          <div className="flex items-center gap-2">
-            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${isPro ? 'bg-primary/20 border-primary/30 text-primary' : 'bg-surface-highlight/30 border-white/5 text-emerald-400'}`}>
-              <span className="material-symbols-outlined text-[16px]">{isPro ? 'stars' : 'bolt'}</span>
-              <span className="text-[10px] font-black uppercase tracking-widest">{isPro ? 'Pro 5.2' : 'Mini'}</span>
-            </div>
-            <span className="hidden sm:inline text-[10px] font-bold text-text-muted uppercase tracking-wider">
-              {format(new Date(), 'EEEE, MMM do')}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Clear Chat Button */}
-            {messages.length > 1 && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault()
-                  if (showResetConfirm) {
-                    clearChat()
-                    setShowResetConfirm(false)
-                  } else {
-                    setShowResetConfirm(true)
-                  }
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all border ${showResetConfirm
-                  ? 'bg-red-500 text-white border-transparent animate-pulse'
-                  : 'bg-white/5 text-text-muted border-white/5 hover:border-red-500/50 hover:text-red-400'
-                  }`}
-              >
-                <span className="material-symbols-outlined text-[16px]">{showResetConfirm ? 'done' : 'delete_sweep'}</span>
-                {showResetConfirm ? 'Sure?' : 'Clear'}
-              </button>
-            )}
-
-            {/* Mode Toggle (Pro Only) */}
-            {userProfile?.is_pro && (
-              <button
-                type="button"
-                onClick={() => setIsPro(!isPro)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all border ${isPro
-                  ? 'bg-primary/20 text-primary border-primary/30'
-                  : 'bg-white/5 text-text-muted border-white/5'
-                  }`}
-              >
-                <span className="material-symbols-outlined text-[16px]">{isPro ? 'cached' : 'bolt'}</span>
-                {isPro ? 'Switch to Mini' : 'Switch to Pro'}
-              </button>
-            )}
-          </div>
-        </div>
 
 
         {messages.map((message) => (
@@ -488,6 +436,22 @@ export const LLMChat = forwardRef<LLMChatRef, LLMChatProps>(({ showResetButton =
               disabled={loading || isRecording || isTranscribing}
             />
             <div className="flex items-center gap-2 pe-3 ps-1">
+              {/* Mode Toggle (Pro Only) */}
+              {userProfile?.is_pro && (
+                <button
+                  type="button"
+                  onClick={() => setIsPro(!isPro)}
+                  className={`flex items-center gap-1.5 h-11 px-3 rounded-full text-[10px] font-bold uppercase transition-all border ${isPro
+                    ? 'bg-primary/20 text-primary border-primary/30 shadow-[0_0_10px_rgba(19,236,91,0.2)]'
+                    : 'bg-surface-dark/50 text-text-muted border-white/5 hover:border-white/20'
+                    }`}
+                  title={isPro ? 'Switch to Mini Model' : 'Switch to Pro Model'}
+                >
+                  <span className="material-symbols-outlined text-[18px]">{isPro ? 'stars' : 'bolt'}</span>
+                  <span className="hidden sm:inline">{isPro ? 'PRO 5.2' : 'MINI'}</span>
+                </button>
+              )}
+
               {/* Mic Button */}
               <button
                 type="button"
