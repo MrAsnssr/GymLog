@@ -140,22 +140,26 @@ export function AdminPage() {
         setClassifying(true)
 
         try {
-            const { data: { session } } = await supabase.auth.getSession()
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+            if (sessionError || !session) {
+                throw new Error('No active session found. Please log in again.')
+            }
+
             const response = await fetch(
                 `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/batch-classify-exercises`,
                 {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${session?.access_token}`,
+                        'Authorization': `Bearer ${session.access_token}`,
                         'Content-Type': 'application/json',
                     }
                 }
             )
 
             const result = await response.json()
-            if (!response.ok) throw new Error(result.error || 'Classification failed')
+            if (!response.ok) throw new Error(result.error || result.details || 'Classification failed')
 
-            alert(`Successfully processed exercises! Check the logs for details.`)
+            alert(`Successfully processed! AI categorized ${result.count} out of ${result.total} exercises.`)
             loadData()
         } catch (err: any) {
             alert('Classification failed: ' + err.message)
