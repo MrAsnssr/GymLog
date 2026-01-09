@@ -38,6 +38,7 @@ export function AdminPage() {
     const [foodLogs, setFoodLogs] = useState<FoodLog[]>([])
     const [profiles, setProfiles] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
+    const [classifying, setClassifying] = useState(false)
 
     const isAdmin = user?.email === 'asnssrr@gmail.com'
 
@@ -134,6 +135,35 @@ export function AdminPage() {
         }
     }
 
+    const batchClassifyExercises = async () => {
+        if (!confirm('This will ask the AI to re-classify every exercise in the database. Continue?')) return
+        setClassifying(true)
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession()
+            const response = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/batch-classify-exercises`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${session?.access_token}`,
+                        'Content-Type': 'application/json',
+                    }
+                }
+            )
+
+            const result = await response.json()
+            if (!response.ok) throw new Error(result.error || 'Classification failed')
+
+            alert(`Successfully processed exercises! Check the logs for details.`)
+            loadData()
+        } catch (err: any) {
+            alert('Classification failed: ' + err.message)
+        } finally {
+            setClassifying(false)
+        }
+    }
+
     if (!isAdmin) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-background-dark text-white p-6">
@@ -167,13 +197,23 @@ export function AdminPage() {
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                     <h1 className="text-2xl font-black text-white uppercase tracking-tight">🔧 Admin Panel</h1>
-                    <button
-                        onClick={loadData}
-                        className="px-4 py-2 bg-surface-highlight text-white rounded-lg hover:bg-surface-highlight/80 transition-colors text-sm font-bold flex items-center gap-2"
-                    >
-                        <span className="material-symbols-outlined text-lg">refresh</span>
-                        Refresh
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={batchClassifyExercises}
+                            disabled={classifying}
+                            className="px-4 py-2 bg-primary/20 text-primary border border-primary/30 rounded-lg hover:bg-primary/30 transition-colors text-sm font-bold flex items-center gap-2 disabled:opacity-50"
+                        >
+                            <span className="material-symbols-outlined text-lg">{classifying ? 'sync' : 'auto_fix'}</span>
+                            {classifying ? 'Classifying...' : 'AI Classify All'}
+                        </button>
+                        <button
+                            onClick={loadData}
+                            className="px-4 py-2 bg-surface-highlight text-white rounded-lg hover:bg-surface-highlight/80 transition-colors text-sm font-bold flex items-center gap-2"
+                        >
+                            <span className="material-symbols-outlined text-lg">refresh</span>
+                            Refresh
+                        </button>
+                    </div>
                 </div>
 
                 {/* Tabs */}
