@@ -116,7 +116,7 @@ serve(async (req) => {
                 properties: {
                   exercise_name: { type: 'string', description: 'Name in English (e.g. Chest Press)' },
                   weight_lbs: { type: 'number', description: 'Weight in lbs (mandatory)' },
-                  reps: { type: 'number', description: 'Reps (mandatory)' },
+                  reps: { type: 'string', description: 'Reps (mandatory). Range like "8-12" is allowed.' },
                   num_sets: { type: 'number', description: 'Number of sets (default 1)' },
                   category: {
                     type: 'string',
@@ -401,7 +401,7 @@ ${effectiveIsPro ? 'As the Pro version, you use the advanced GPT-5.2 model for s
             sets: Array<{
               exercise_name: string,
               weight_lbs: number,
-              reps: number,
+              reps: string,
               category: string
             }>
           }

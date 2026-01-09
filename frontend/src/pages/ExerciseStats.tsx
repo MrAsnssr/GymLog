@@ -72,10 +72,19 @@ export function ExerciseStats() {
 
                     acc[exId].total_sets += 1
 
+                    const getRepValue = (val: string | number) => {
+                        if (typeof val === 'number') return val
+                        const match = val.match(/\d+/)
+                        return match ? parseInt(match[0]) : 0
+                    }
+
+                    const currReps = getRepValue(curr.reps)
+                    const maxReps = getRepValue(acc[exId].max_reps)
+
                     if (curr.weight_lbs > acc[exId].max_weight) {
                         acc[exId].max_weight = curr.weight_lbs
                         acc[exId].max_reps = curr.reps
-                    } else if (curr.weight_lbs === acc[exId].max_weight && curr.reps > acc[exId].max_reps) {
+                    } else if (curr.weight_lbs === acc[exId].max_weight && currReps > maxReps) {
                         acc[exId].max_reps = curr.reps
                     }
 
