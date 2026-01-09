@@ -1,13 +1,14 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import OpenAI from 'https://deno.land/x/openai@v4.20.0/mod.ts'
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders })
     }
@@ -15,7 +16,7 @@ serve(async (req) => {
     try {
         const authHeader = req.headers.get('Authorization')
         if (!authHeader) {
-            return new Response(JSON.stringify({ error: 'Missing authorization' }), { status: 401, headers: corsHeaders })
+            return new Response(JSON.stringify({ error: 'Missing authorization' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
         }
 
         const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
@@ -28,7 +29,7 @@ serve(async (req) => {
         }).auth.getUser()
 
         if (userError || !user || user.email !== 'asnssrr@gmail.com') {
-            return new Response(JSON.stringify({ error: 'Unauthorized admin only' }), { status: 403, headers: corsHeaders })
+            return new Response(JSON.stringify({ error: 'Unauthorized admin only' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
         }
 
         const openai = new OpenAI({ apiKey: Deno.env.get('OPENAI_API_KEY') })
@@ -40,7 +41,7 @@ serve(async (req) => {
 
         if (fetchError) throw fetchError
         if (!exercises || exercises.length === 0) {
-            return new Response(JSON.stringify({ message: 'No exercises found' }), { headers: corsHeaders })
+            return new Response(JSON.stringify({ message: 'No exercises found' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
         }
 
         const exerciseNames = exercises.map(ex => ex.name)
@@ -64,9 +65,20 @@ serve(async (req) => {
         })
 
         const responseContent = JSON.parse(completion.choices[0].message.content || '{}')
-        const classifications = responseContent.classifications || responseContent.exercises || (Array.isArray(responseContent) ? responseContent : Object.values(responseContent)[0])
 
-        if (!Array.isArray(classifications)) {
+        let classifications = []
+        if (Array.isArray(responseContent)) {
+            classifications = responseContent
+        } else if (responseContent.classifications) {
+            classifications = responseContent.classifications
+        } else if (responseContent.exercises) {
+            classifications = responseContent.exercises
+        } else {
+            const arrays = Object.values(responseContent).find(v => Array.isArray(v))
+            if (arrays) classifications = arrays
+        }
+
+        if (!Array.isArray(classifications) || classifications.length === 0) {
             console.error('Unexpected OpenAI response shape:', responseContent)
             throw new Error('Failed to parse classifications from AI')
         }
@@ -85,12 +97,12 @@ serve(async (req) => {
             }
         }
 
-        return new Response(JSON.stringify({ success: true, results }), {
+        return new Response(JSON.stringify({ success: true, count: results.length }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
 
     } catch (error: any) {
         console.error('Batch classify error:', error)
-        return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: corsHeaders })
+        return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 })
