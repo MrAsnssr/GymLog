@@ -16,88 +16,99 @@ Deno.serve(async (req) => {
     try {
         const authHeader = req.headers.get('Authorization')
         if (!authHeader) {
-            return new Response(JSON.stringify({ error: 'Missing authorization' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+            return new Response(JSON.stringify({ error: 'Missing authorization header' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
         }
 
         const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
-        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-        const supabase = createClient(supabaseUrl, supabaseServiceKey)
+        const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 
-        // Verify admin status
-        const { data: { user }, error: userError } = await createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY') ?? '', {
+        const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
             global: { headers: { Authorization: authHeader } }
-        }).auth.getUser()
+        })
 
-        if (userError || !user || user.email !== 'asnssrr@gmail.com') {
+        const { data: { user }, error: userError } = await supabaseAuth.auth.getUser()
+
+        if (userError || !user) {
+            return new Response(JSON.stringify({ error: 'Invalid token' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }
+
+        if (user.email !== 'asnssrr@gmail.com') {
             return new Response(JSON.stringify({ error: 'Unauthorized admin only' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
         }
 
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        if (!supabaseServiceKey) {
+            throw new Error('SUPABASE_SERVICE_ROLE_KEY is not configured')
+        }
+
+        const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
+        })
+
         const openai = new OpenAI({ apiKey: Deno.env.get('OPENAI_API_KEY') })
 
-        // Fetch all exercises
         const { data: exercises, error: fetchError } = await supabase
             .from('exercises')
             .select('id, name, category')
 
         if (fetchError) throw fetchError
         if (!exercises || exercises.length === 0) {
-            return new Response(JSON.stringify({ message: 'No exercises found' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+            return new Response(JSON.stringify({ message: 'No exercises found', success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
         }
 
-        const exerciseNames = exercises.map(ex => ex.name)
+        const exerciseList = exercises.map(ex => ({ id: ex.id, name: ex.name }))
 
         const prompt = `
-      I have a list of gym exercises. Please classify each one into exactly ONE of these categories:
-      Chest, Back, Legs, Shoulders, Arms, Core, Cardio.
+      As a fitness expert, classify these gym exercises into exactly ONE category: Chest, Back, Legs, Shoulders, Arms, Core, Cardio.
+      Names could be English or Arabic (e.g. "ليج اكستنشن" is Legs).
+      
+      Respond with ONLY a JSON object: { "results": [{ "id": "...", "category": "..." }] }
+      Allowed Categories: Chest, Back, Legs, Shoulders, Arms, Core, Cardio.
 
-      Respond ONLY with a JSON array of objects, where each object has:
-      "name": the original exercise name
-      "category": the chosen category
-
-      List of exercises:
-      ${exerciseNames.join(', ')}
+      Data: ${JSON.stringify(exerciseList)}
     `
 
         const completion = await openai.chat.completions.create({
             model: 'gpt-4o-mini',
-            messages: [{ role: 'user', content: prompt }],
+            messages: [{ role: 'system', content: 'You are a precise fitness classifier. Response must be JSON.' }, { role: 'user', content: prompt }],
             response_format: { type: 'json_object' }
         })
 
-        const responseContent = JSON.parse(completion.choices[0].message.content || '{}')
+        const aiResponse = JSON.parse(completion.choices[0].message.content || '{"results":[]}')
+        const classifications = aiResponse.results || []
 
-        let classifications = []
-        if (Array.isArray(responseContent)) {
-            classifications = responseContent
-        } else if (responseContent.classifications) {
-            classifications = responseContent.classifications
-        } else if (responseContent.exercises) {
-            classifications = responseContent.exercises
-        } else {
-            const arrays = Object.values(responseContent).find(v => Array.isArray(v))
-            if (arrays) classifications = arrays
-        }
+        let updatedCount = 0
+        const errors = []
 
-        if (!Array.isArray(classifications) || classifications.length === 0) {
-            console.error('Unexpected OpenAI response shape:', responseContent)
-            throw new Error('Failed to parse classifications from AI')
-        }
-
-        // Update database
-        const results = []
         for (const item of classifications) {
-            const exercise = exercises.find(ex => ex.name.toLowerCase() === item.name.toLowerCase())
-            if (exercise) {
-                const { error: updateError } = await supabase
-                    .from('exercises')
-                    .update({ category: item.category })
-                    .eq('id', exercise.id)
+            if (!item.id || !item.category) continue
 
-                results.push({ name: item.name, category: item.category, success: !updateError })
+            const validCategories = ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core', 'Cardio']
+            const matchedCategory = validCategories.find(c => c.toLowerCase() === item.category.toLowerCase())
+
+            if (!matchedCategory) continue
+
+            const { error: updateError } = await supabase
+                .from('exercises')
+                .update({ category: matchedCategory })
+                .eq('id', item.id)
+
+            if (updateError) {
+                errors.push({ id: item.id, error: updateError.message })
+            } else {
+                updatedCount++
             }
         }
 
-        return new Response(JSON.stringify({ success: true, count: results.length }), {
+        return new Response(JSON.stringify({
+            success: true,
+            count: updatedCount,
+            total: exercises.length,
+            errors: errors.length > 0 ? errors : undefined
+        }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
 
