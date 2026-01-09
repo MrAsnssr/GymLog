@@ -117,9 +117,14 @@ serve(async (req) => {
                   exercise_name: { type: 'string', description: 'Name in English (e.g. Chest Press)' },
                   weight_lbs: { type: 'number', description: 'Weight in lbs (mandatory)' },
                   reps: { type: 'number', description: 'Reps (mandatory)' },
-                  num_sets: { type: 'number', description: 'Number of sets (default 1)' }
+                  num_sets: { type: 'number', description: 'Number of sets (default 1)' },
+                  category: {
+                    type: 'string',
+                    enum: ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core', 'Cardio'],
+                    description: 'Muscle group or Cardio. Predict based on exercise name.'
+                  }
                 },
-                required: ['exercise_name', 'weight_lbs', 'reps']
+                required: ['exercise_name', 'weight_lbs', 'reps', 'category']
               }
             }
           },
@@ -259,6 +264,9 @@ ${effectiveIsPro ? 'As the Pro version, you use the advanced GPT-5.2 model for s
 3. Missing data? Just ask briefly: "كم؟" or "الوزن?"
 4. Save exercise names in English.
 5. Weight unit preference: ${weightUnit}
+6. EXERCISE CATEGORIES:
+   - For every exercise, you MUST provide a category from this list: Chest, Back, Legs, Shoulders, Arms, Core, Cardio.
+   - If user doesn't specify, you MUST predict it (e.g. Bench Press -> Chest, Run -> Cardio).
 ### DATA VALIDATION & RIDICULOUSNESS CHECK:
 - If reps > 30 for heavy lifts (bench, squat, deadlift), ask to confirm.
 - If weight seems extreme (>500 lbs), ask to confirm.
@@ -393,7 +401,8 @@ ${effectiveIsPro ? 'As the Pro version, you use the advanced GPT-5.2 model for s
             sets: Array<{
               exercise_name: string,
               weight_lbs: number,
-              reps: number
+              reps: number,
+              category: string
             }>
           }
 
@@ -460,13 +469,20 @@ ${effectiveIsPro ? 'As the Pro version, you use the advanced GPT-5.2 model for s
             let exerciseId
             if (exercise) {
               exerciseId = exercise.id
+              if (set.category && (exercise.category === 'other' || exercise.category !== set.category)) {
+                // Update category if it was "other" or mismatched
+                await supabase
+                  .from('exercises')
+                  .update({ category: set.category })
+                  .eq('id', exercise.id)
+              }
             } else {
               // Create new exercise
               const { data: newExercise } = await supabase
                 .from('exercises')
                 .insert({
                   name: set.exercise_name,
-                  category: 'other'
+                  category: set.category || 'other'
                 })
                 .select()
                 .single()

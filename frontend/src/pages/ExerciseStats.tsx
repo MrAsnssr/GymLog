@@ -158,59 +158,79 @@ export function ExerciseStats() {
                             <p className="text-text-muted">Start logging workouts with Hazem to see your progress here.</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {filteredStats.map((stat) => (
-                                <div
-                                    key={stat.exercise_id}
-                                    className="group relative bg-surface-dark/40 border border-surface-highlight hover:border-primary/40 rounded-3xl p-6 transition-all backdrop-blur-sm overflow-hidden"
-                                >
-                                    {/* Background decoration */}
-                                    <div className="absolute -right-4 -top-4 text-white/5 group-hover:text-primary/10 transition-colors">
-                                        <span className="material-symbols-outlined text-8xl leading-none">fitness_center</span>
+                        <div className="flex flex-col gap-12">
+                            {['Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core', 'Cardio', 'other'].map((category) => {
+                                const categoryStats = filteredStats.filter(s => (s.category || 'other').toLowerCase() === category.toLowerCase())
+                                if (categoryStats.length === 0) return null
+
+                                return (
+                                    <div key={category} className="flex flex-col gap-6">
+                                        <div className="flex items-center gap-4 px-2">
+                                            <div className="h-2 w-2 rounded-full bg-primary shadow-[0_0_10px_rgba(19,236,91,0.5)]"></div>
+                                            <h3 className="text-white text-xl font-black tracking-tight uppercase">{category}</h3>
+                                            <div className="flex-1 h-px bg-surface-highlight/50"></div>
+                                            <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">{categoryStats.length} Exercises</span>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            {categoryStats.map((stat) => (
+                                                <div
+                                                    key={stat.exercise_id}
+                                                    className="group relative bg-surface-dark/40 border border-surface-highlight hover:border-primary/40 rounded-3xl p-6 transition-all backdrop-blur-sm overflow-hidden"
+                                                >
+                                                    {/* Background decoration */}
+                                                    <div className="absolute -right-4 -top-4 text-white/5 group-hover:text-primary/10 transition-colors">
+                                                        <span className="material-symbols-outlined text-8xl leading-none">
+                                                            {category.toLowerCase() === 'cardio' ? 'directions_run' : 'fitness_center'}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="relative z-10">
+                                                        <div className="flex items-start justify-between mb-6">
+                                                            <div>
+                                                                <span className="text-[10px] font-black tracking-widest text-primary/70 uppercase mb-1 block">
+                                                                    {stat.category}
+                                                                </span>
+                                                                <h4 className="text-white text-xl font-bold group-hover:text-primary transition-all line-clamp-1">
+                                                                    {stat.name}
+                                                                </h4>
+                                                            </div>
+                                                            <div className="h-10 w-10 rounded-xl bg-surface-highlight/30 flex items-center justify-center text-primary">
+                                                                <span className="material-symbols-outlined text-xl">trending_up</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-2 gap-4 mb-6">
+                                                            <div className="bg-surface-highlight/10 rounded-2xl p-4 border border-white/5 group-hover:border-primary/20 transition-all">
+                                                                <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">Max Weight</p>
+                                                                <p className="text-2xl font-display font-black text-white leading-none">
+                                                                    {stat.max_weight} <span className="text-sm font-body font-bold text-text-muted">LBS</span>
+                                                                </p>
+                                                            </div>
+                                                            <div className="bg-surface-highlight/10 rounded-2xl p-4 border border-white/5 group-hover:border-primary/20 transition-all">
+                                                                <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">Best Reps</p>
+                                                                <p className="text-2xl font-display font-black text-white leading-none">
+                                                                    {stat.max_reps} <span className="text-sm font-body font-bold text-text-muted">REPS</span>
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center justify-between pt-4 border-t border-surface-highlight/50">
+                                                            <div className="flex items-center gap-2 text-text-muted">
+                                                                <span className="material-symbols-outlined text-sm">view_timeline</span>
+                                                                <span className="text-xs font-bold uppercase tracking-wider">{stat.total_sets} Sets</span>
+                                                            </div>
+                                                            <p className="text-[10px] font-bold text-text-muted uppercase tracking-tighter">
+                                                                Last: {format(new Date(stat.last_date), 'MMM d, yyyy')}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-
-                                    <div className="relative z-10">
-                                        <div className="flex items-start justify-between mb-6">
-                                            <div>
-                                                <span className="text-[10px] font-black tracking-widest text-primary/70 uppercase mb-1 block">
-                                                    {stat.category}
-                                                </span>
-                                                <h4 className="text-white text-xl font-bold group-hover:text-primary transition-all">
-                                                    {stat.name}
-                                                </h4>
-                                            </div>
-                                            <div className="h-10 w-10 rounded-xl bg-surface-highlight/30 flex items-center justify-center text-primary">
-                                                <span className="material-symbols-outlined text-xl">trending_up</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-4 mb-6">
-                                            <div className="bg-surface-highlight/10 rounded-2xl p-4 border border-white/5 group-hover:border-primary/20 transition-all">
-                                                <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">Max Weight</p>
-                                                <p className="text-2xl font-display font-black text-white leading-none">
-                                                    {stat.max_weight} <span className="text-sm font-body font-bold text-text-muted">LBS</span>
-                                                </p>
-                                            </div>
-                                            <div className="bg-surface-highlight/10 rounded-2xl p-4 border border-white/5 group-hover:border-primary/20 transition-all">
-                                                <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">Best Reps</p>
-                                                <p className="text-2xl font-display font-black text-white leading-none">
-                                                    {stat.max_reps} <span className="text-sm font-body font-bold text-text-muted">REPS</span>
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center justify-between pt-4 border-t border-surface-highlight/50">
-                                            <div className="flex items-center gap-2 text-text-muted">
-                                                <span className="material-symbols-outlined text-sm">view_timeline</span>
-                                                <span className="text-xs font-bold uppercase tracking-wider">{stat.total_sets} Sets Logged</span>
-                                            </div>
-                                            <p className="text-[10px] font-bold text-text-muted uppercase tracking-tighter">
-                                                Last: {format(new Date(stat.last_date), 'MMM d, yyyy')}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
+                                )
+                            })}
                         </div>
                     )}
                 </div>
